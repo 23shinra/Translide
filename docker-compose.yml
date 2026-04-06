@@ -1,0 +1,11 @@
+# Локальный LibreTranslate для translide (порт 5000).
+# Запуск: docker compose up -d
+# Первый старт может занять несколько минут (скачивание моделей).
+# Проверка: curl http://127.0.0.1:5000/languages
+
+services:
+  libretranslate:
+    image: libretranslate/libretranslate:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5000:5000"

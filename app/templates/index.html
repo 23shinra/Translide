@@ -1,0 +1,3111 @@
+<!doctype html>
+<html lang="ru" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem("translide-theme");
+          if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+          else document.documentElement.setAttribute("data-theme", "dark");
+        } catch (e) {
+          document.documentElement.setAttribute("data-theme", "dark");
+        }
+      })();
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="description" content="translide — перевод презентаций: загрузите .pptx, .ppt или .odp, выберите язык и скачайте файл с тем же форматом слайдов." />
+    <title>translide</title>
+    <link rel="icon" href="/static/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" href="/static/favicon-32.png" sizes="32x32" />
+    <link rel="icon" type="image/png" href="/static/favicon-48.png" sizes="48x48" />
+    <link rel="apple-touch-icon" href="/static/favicon-180.png" sizes="180x180" />
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #07060b;
+        --bg-deep: #05040a;
+        --bg-glow: rgba(139, 92, 246, 0.28);
+        --text: rgba(255, 255, 255, 0.92);
+        --muted: rgba(255, 255, 255, 0.55);
+        --muted2: rgba(255, 255, 255, 0.42);
+        --accent: #8b5cf6;
+        --accent-dim: rgba(139, 92, 246, 0.35);
+        --card: rgba(255, 255, 255, 0.04);
+        --stroke: rgba(255, 255, 255, 0.1);
+        --input-bg: rgba(0, 0, 0, 0.35);
+        --panel-a: rgba(20, 18, 32, 0.98);
+        --panel-b: rgba(10, 9, 18, 0.99);
+        --panel-a-soft: rgba(20, 18, 32, 0.78);
+        --panel-b-soft: rgba(10, 9, 18, 0.86);
+        --shadow-elevated: rgba(0, 0, 0, 0.45);
+        --shadow-elevated-lg: rgba(0, 0, 0, 0.55);
+        --radius-card: 20px;
+        --radius-input: 8px;
+        /* Modern “spring-ish” UI motion */
+        --ease-spring: cubic-bezier(0.2, 0.9, 0.2, 1);
+        --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+        --t-press: 120ms;
+        --t-ui: 260ms;
+      }
+
+      * { box-sizing: border-box; }
+      html, body, button, input, select, textarea { font-family: inherit; }
+      a, button, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
+        color: var(--text);
+        background-color: var(--bg);
+        background-image:
+          radial-gradient(ellipse 900px 700px at 100% -10%, var(--bg-glow), transparent 55%),
+          linear-gradient(180deg, var(--bg), var(--bg-deep));
+      }
+
+      /* Скроллбар: Firefox + Chrome / Edge / Safari (webkit) */
+      * {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(139, 92, 246, 0.55) rgba(255, 255, 255, 0.06);
+      }
+      *::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+      }
+      *::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 999px;
+      }
+      *::-webkit-scrollbar-thumb {
+        background: linear-gradient(180deg, rgba(186, 170, 255, 0.55), rgba(139, 92, 246, 0.42));
+        border-radius: 999px;
+        border: 2px solid rgba(7, 6, 11, 0.55);
+        background-clip: padding-box;
+      }
+      *::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(180deg, rgba(210, 200, 255, 0.7), rgba(139, 92, 246, 0.58));
+        border-color: rgba(7, 6, 11, 0.45);
+      }
+      *::-webkit-scrollbar-corner {
+        background: transparent;
+      }
+      *::-webkit-scrollbar-button {
+        display: none;
+        width: 0;
+        height: 0;
+      }
+
+      /* Theme toggle — правый верхний угол */
+      .theme-toggle {
+        position: fixed;
+        top: calc(16px + env(safe-area-inset-top, 0px));
+        right: calc(16px + env(safe-area-inset-right, 0px));
+        z-index: 3000;
+        width: 44px;
+        height: 44px;
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: linear-gradient(180deg, var(--panel-a-soft), var(--panel-b-soft));
+        color: rgba(255, 255, 255, 0.92);
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+        transition: transform var(--t-ui) var(--ease-spring), border-color var(--t-ui) var(--ease-standard), filter var(--t-ui) var(--ease-standard);
+      }
+      .theme-toggle:hover {
+        transform: translate3d(0, -2px, 0);
+        filter: brightness(1.06);
+      }
+      .theme-toggle:active { transform: translate3d(0, 0, 0); transition-duration: var(--t-press); }
+      .theme-toggle svg { width: 22px; height: 22px; }
+      .theme-toggle .icon-moon { display: none; }
+      .theme-toggle .icon-sun { display: block; }
+      html[data-theme="light"] .theme-toggle .icon-sun { display: none; }
+      html[data-theme="light"] .theme-toggle .icon-moon { display: block; }
+
+      .wrap {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 28px 20px 48px;
+        padding-left: max(20px, env(safe-area-inset-left, 0px));
+        padding-right: max(20px, env(safe-area-inset-right, 0px));
+        padding-bottom: max(48px, env(safe-area-inset-bottom, 0px) + 24px);
+      }
+      @media (max-width: 520px) {
+        .wrap {
+          padding-top: max(28px, env(safe-area-inset-top, 0px) + 12px);
+          padding-right: max(20px, env(safe-area-inset-right, 0px) + 52px);
+        }
+      }
+      @media (max-width: 600px) {
+        .logo-img {
+          width: 80px;
+          height: 80px;
+        }
+      }
+
+      .top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 36px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid var(--stroke);
+        flex-wrap: wrap;
+      }
+      .brand { display: flex; align-items: center; gap: 14px; min-width: 0; }
+      .logo-img {
+        width: 132px;
+        height: 132px;
+        border-radius: 0;
+        flex-shrink: 0;
+        object-fit: contain;
+        background: transparent;
+        box-shadow: none;
+      }
+      .titleWrap { display: grid; gap: 4px; min-width: 0; }
+      h1 {
+        margin: 0;
+        font-size: clamp(2rem, 2.8vw, 2.6rem);
+        font-weight: 800;
+        letter-spacing: -0.04em;
+        line-height: 1.05;
+      }
+      .sub { margin: 0; color: var(--muted2); font-size: 0.8125rem; }
+
+      .top-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+
+      .btn-ghost {
+        padding: 8px 14px;
+        border-radius: var(--radius-input);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.05);
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 0.8125rem;
+        font-weight: 600;
+        cursor: pointer;
+        will-change: transform;
+        transition:
+          transform var(--t-ui) var(--ease-spring),
+          background var(--t-ui) var(--ease-standard),
+          border-color var(--t-ui) var(--ease-standard),
+          box-shadow var(--t-ui) var(--ease-standard),
+          filter var(--t-ui) var(--ease-standard);
+      }
+      .btn-ghost:hover { background: rgba(255, 255, 255, 0.08); transform: translate3d(0, -2px, 0); }
+      .btn-ghost:active { transform: translate3d(0, 0, 0); transition-duration: var(--t-press); }
+      .btn-ghost.primary {
+        border-color: rgba(139, 92, 246, 0.5);
+        color: #e9d5ff;
+        background: rgba(139, 92, 246, 0.12);
+      }
+      .btn-ghost.primary:hover { background: rgba(139, 92, 246, 0.2); }
+      .btn-ghost.danger {
+        border-color: rgba(252, 165, 165, 0.35);
+        background: rgba(252, 165, 165, 0.08);
+        color: rgba(255, 220, 220, 0.95);
+      }
+      .btn-ghost.danger:hover { background: rgba(252, 165, 165, 0.12); }
+
+      /* Interactive glow for most controls */
+      input[type="text"],
+      input[type="password"],
+      select,
+      .chip-btn,
+      .help-btn,
+      button[type="submit"] {
+        will-change: transform;
+        transition:
+          transform var(--t-ui) var(--ease-spring),
+          background var(--t-ui) var(--ease-standard),
+          border-color var(--t-ui) var(--ease-standard),
+          box-shadow var(--t-ui) var(--ease-standard),
+          filter var(--t-ui) var(--ease-standard);
+      }
+      .chip-btn:hover,
+      .help-btn:hover {
+        transform: translate3d(0, -2px, 0);
+        border-color: rgba(139, 92, 246, 0.35);
+        box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.10);
+      }
+      .chip-btn:active,
+      .help-btn:active {
+        transform: translate3d(0, 0, 0);
+        transition-duration: var(--t-press);
+      }
+
+      input[type="text"]:hover,
+      input[type="password"]:hover,
+      select:hover {
+        border-color: rgba(139, 92, 246, 0.35);
+        background: rgba(0, 0, 0, 0.42);
+      }
+
+      .main {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 40px;
+        align-items: start;
+      }
+      @media (max-width: 900px) {
+        .main { grid-template-columns: 1fr; gap: 28px; }
+      }
+
+      .hero h2 {
+        margin: 0 0 14px;
+        font-size: clamp(1.5rem, 3vw, 1.85rem);
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        line-height: 1.2;
+        color: var(--text);
+      }
+      .hero .lead {
+        margin: 0 0 28px;
+        color: var(--muted);
+        font-size: 1rem;
+        line-height: 1.55;
+        max-width: 38ch;
+      }
+
+      .steps {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 16px;
+      }
+      .steps li {
+        display: grid;
+        grid-template-columns: 32px 1fr;
+        gap: 14px;
+        align-items: start;
+        padding: 8px 10px;
+        margin-left: -10px;
+        border-radius: 14px;
+        transition: background var(--t-ui) var(--ease-standard), border-color var(--t-ui) var(--ease-standard), transform var(--t-ui) var(--ease-spring);
+      }
+      @media (hover: hover) {
+        .steps li:hover {
+          background: rgba(255, 255, 255, 0.03);
+          transform: translate3d(0, -2px, 0);
+        }
+      }
+      .step-num {
+        width: 32px;
+        height: 32px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8125rem;
+        font-weight: 700;
+        color: var(--accent);
+        background: rgba(139, 92, 246, 0.12);
+        border: 1px solid rgba(139, 92, 246, 0.35);
+      }
+      .step-body strong {
+        display: block;
+        font-size: 0.9375rem;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.88);
+        margin-bottom: 4px;
+      }
+      .step-body span {
+        font-size: 0.8125rem;
+        color: var(--muted);
+        line-height: 1.45;
+      }
+
+      .card {
+        border: 1px solid var(--stroke);
+        border-radius: var(--radius-card);
+        padding: 0;
+        background: var(--card);
+        box-shadow: 0 24px 64px var(--shadow-elevated);
+        will-change: transform;
+        transition: border-color var(--t-ui) var(--ease-standard), box-shadow var(--t-ui) var(--ease-standard), transform var(--t-ui) var(--ease-spring);
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+      }
+      @media (hover: hover) {
+        .card:hover {
+          border-color: rgba(139, 92, 246, 0.22);
+          box-shadow: 0 28px 78px var(--shadow-elevated-lg);
+          transform: translate3d(0, -2px, 0);
+        }
+      }
+      .card-body { padding: 24px; position: relative; }
+      .card > p.intro {
+        margin: 0 0 14px;
+        color: var(--muted);
+        font-size: 0.9375rem;
+        line-height: 1.5;
+      }
+
+      /* Floating FAQ button */
+      .faq-fab {
+        position: fixed;
+        right: max(18px, env(safe-area-inset-right, 0px));
+        bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+        z-index: 1250;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 14px 10px 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: linear-gradient(180deg, rgba(20, 18, 32, 0.98), rgba(10, 9, 18, 0.99));
+        box-shadow: 0 26px 70px rgba(0, 0, 0, 0.65);
+        color: rgba(255, 255, 255, 0.92);
+        cursor: pointer;
+      }
+      .faq-fab:hover { filter: brightness(1.06); }
+      .faq-fab:active { transform: translate3d(0, 0, 0); transition-duration: var(--t-press); }
+      .faq-fab-badge {
+        width: 34px;
+        height: 34px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(139, 92, 246, 0.14);
+        border: 1px solid rgba(139, 92, 246, 0.35);
+        font-weight: 900;
+      }
+      .faq-fab-label {
+        font-size: 0.8125rem;
+        font-weight: 850;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.9);
+      }
+      /* Keep space from toasts on small screens */
+      @media (max-width: 520px) {
+        .faq-fab { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
+      }
+      label {
+        display: block;
+        font-weight: 600;
+        font-size: 0.8125rem;
+        margin: 14px 0 6px;
+        color: rgba(255, 255, 255, 0.88);
+      }
+      label:first-of-type { margin-top: 0; }
+
+      /* Dropzone */
+      .dropzone {
+        width: 100%;
+        border-radius: 14px;
+        border: 1px dashed rgba(255, 255, 255, 0.18);
+        background: rgba(0, 0, 0, 0.22);
+        padding: 14px;
+        display: grid;
+        gap: 10px;
+        cursor: pointer;
+        position: relative;
+        will-change: transform;
+        transition:
+          transform var(--t-ui) var(--ease-spring),
+          border-color var(--t-ui) var(--ease-standard),
+          background var(--t-ui) var(--ease-standard),
+          box-shadow var(--t-ui) var(--ease-standard);
+      }
+      .dropzone:hover {
+        border-color: rgba(139, 92, 246, 0.55);
+        background: rgba(0, 0, 0, 0.28);
+      }
+      .dropzone.is-dragover {
+        border-color: rgba(139, 92, 246, 0.75);
+        box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.14);
+        transform: translate3d(0, -2px, 0);
+      }
+      .dropzone-top {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        justify-content: space-between;
+      }
+      .dropzone-actions {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        flex-shrink: 0;
+      }
+      .help-btn {
+        width: 30px;
+        height: 30px;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.06);
+        color: rgba(255, 255, 255, 0.9);
+        cursor: default;
+        font-weight: 900;
+        line-height: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .help-btn:hover { background: rgba(255, 255, 255, 0.10); }
+      .card-help {
+        position: absolute;
+        right: 18px;
+        top: 18px;
+        z-index: 2;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .help-tip {
+        position: absolute;
+        right: 0;
+        top: 38px;
+        width: min(420px, calc(100vw - 64px));
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: linear-gradient(180deg, rgba(20, 18, 32, 0.98), rgba(10, 9, 18, 0.99));
+        box-shadow: 0 26px 70px rgba(0, 0, 0, 0.65);
+        padding: 10px 12px;
+        color: rgba(255, 255, 255, 0.78);
+        font-size: 0.75rem;
+        line-height: 1.4;
+        display: none;
+        text-align: left;
+      }
+      .card-help:hover .help-tip,
+      .card-help:focus-within .help-tip {
+        display: block;
+      }
+      .dropzone-title {
+        font-size: 0.875rem;
+        font-weight: 700;
+        color: rgba(255, 255, 255, 0.9);
+      }
+      .dropzone-sub {
+        font-size: 0.75rem;
+        color: var(--muted2);
+        line-height: 1.35;
+      }
+      .file-chip {
+        display: none;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 10px 10px 10px 12px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.05);
+      }
+      .file-chip.is-visible { display: flex; }
+      .file-chip-meta { min-width: 0; }
+      .file-chip-name {
+        font-size: 0.8125rem;
+        font-weight: 650;
+        color: rgba(255, 255, 255, 0.88);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        max-width: 100%;
+      }
+      .file-chip-size { font-size: 0.6875rem; color: var(--muted2); margin-top: 2px; }
+      .file-chip-actions { display: flex; gap: 8px; align-items: center; }
+      .chip-btn {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.06);
+        color: rgba(255, 255, 255, 0.9);
+        cursor: pointer;
+      }
+      .chip-btn:hover { background: rgba(255, 255, 255, 0.1); }
+
+      input[type="file"],
+      select,
+      input[type="text"],
+      input[type="password"] {
+        width: 100%;
+        padding: 10px 12px;
+        border-radius: var(--radius-input);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: var(--input-bg);
+        color: var(--text);
+        outline: none;
+        font-size: 0.875rem;
+      }
+      input[type="file"] { padding: 10px; cursor: pointer; }
+      input[type="file"]::file-selector-button {
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.06);
+        color: rgba(255, 255, 255, 0.88);
+        padding: 7px 11px;
+        border-radius: 6px;
+        cursor: pointer;
+        margin-right: 10px;
+        font-size: 0.8125rem;
+      }
+      input:focus,
+      select:focus {
+        border-color: rgba(139, 92, 246, 0.65);
+        box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+      }
+
+      .row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+        margin-top: 4px;
+        padding: 16px;
+        border-radius: 12px;
+        background: rgba(0, 0, 0, 0.22);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+      }
+      .row label { margin-top: 0; }
+      @media (max-width: 760px) {
+        .row { grid-template-columns: 1fr; }
+      }
+      .row:has(.lang-picker-inner) {
+        overflow: visible;
+        z-index: 1;
+      }
+
+      .lang-load-status {
+        grid-column: 1 / -1;
+        margin: 0 0 8px;
+        min-height: 1.25em;
+      }
+      .lang-picker-inner {
+        position: relative;
+        margin-top: 6px;
+      }
+      .combo-native-select {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+        opacity: 0;
+        pointer-events: none;
+      }
+      .lang-picker-btn {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 10px 12px;
+        min-height: 44px;
+        border-radius: var(--radius-input);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: var(--input-bg);
+        color: var(--text);
+        font-size: 0.875rem;
+        font-weight: 600;
+        text-align: left;
+        cursor: pointer;
+        transition:
+          border-color var(--t-ui) var(--ease-standard),
+          background var(--t-ui) var(--ease-standard),
+          box-shadow var(--t-ui) var(--ease-standard);
+      }
+      .lang-picker-btn:hover {
+        border-color: rgba(139, 92, 246, 0.35);
+        background: rgba(0, 0, 0, 0.42);
+      }
+      .lang-picker-btn:focus-visible {
+        outline: none;
+        border-color: rgba(139, 92, 246, 0.65);
+        box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+      }
+      .lang-picker-btn:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+      }
+      .lang-picker-btn-main {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        min-width: 0;
+        flex: 1;
+      }
+      .lang-picker-btn-text {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .lang-picker-btn-flag {
+        font-size: 1.35rem;
+        line-height: 1;
+        flex-shrink: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 36px;
+        min-height: 22px;
+      }
+      .lang-picker-flag-img {
+        width: 32px;
+        height: 22px;
+        object-fit: cover;
+        border-radius: 3px;
+        display: block;
+        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14);
+        background: rgba(0, 0, 0, 0.2);
+      }
+      html[data-theme="light"] .lang-picker-flag-img {
+        box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.12);
+        background: rgba(255, 255, 255, 0.6);
+      }
+      .lang-picker-chevron {
+        flex-shrink: 0;
+        font-size: 0.65rem;
+        opacity: 0.65;
+      }
+      .lang-picker-panel {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: calc(100% + 4px);
+        z-index: 80;
+        border-radius: var(--radius-input);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: linear-gradient(180deg, var(--panel-a-soft), var(--panel-b-soft));
+        box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+        padding: 8px;
+      }
+      .lang-picker-search {
+        width: 100%;
+        padding: 8px 10px;
+        margin-bottom: 6px;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: var(--input-bg);
+        color: var(--text);
+        font-size: 0.8125rem;
+        outline: none;
+      }
+      .lang-picker-search:focus {
+        border-color: rgba(139, 92, 246, 0.55);
+        box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.12);
+      }
+      .lang-picker-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        max-height: min(260px, 42vh);
+        overflow: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+      .lang-picker-option {
+        margin: 0;
+        padding: 0;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+      .lang-picker-option[aria-selected="true"] {
+        background: rgba(139, 92, 246, 0.14);
+      }
+      .lang-picker-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 10px 10px;
+        font-size: 0.875rem;
+        color: var(--text);
+      }
+      .lang-picker-name {
+        min-width: 0;
+        text-align: left;
+        line-height: 1.35;
+      }
+      .lang-picker-option-flag {
+        font-size: 1.35rem;
+        line-height: 1;
+        flex-shrink: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 36px;
+        min-height: 22px;
+      }
+
+      .dropzone-alert {
+        display: none;
+        margin: 0;
+        padding: 8px 10px;
+        border-radius: 10px;
+        border: 1px solid rgba(252, 165, 165, 0.35);
+        background: rgba(252, 165, 165, 0.1);
+        color: rgba(255, 210, 210, 0.95);
+        font-size: 0.8125rem;
+        line-height: 1.35;
+      }
+      .dropzone-alert.is-visible { display: block; }
+      html[data-theme="light"] .dropzone-alert {
+        border-color: rgba(220, 38, 38, 0.35);
+        background: rgba(254, 226, 226, 0.55);
+        color: #7f1d1d;
+      }
+
+      .faq-summary {
+        cursor: pointer;
+        font-weight: 700;
+        color: var(--text);
+      }
+
+      button[type="submit"] {
+        margin-top: 18px;
+        width: 100%;
+        padding: 12px 16px;
+        border-radius: var(--radius-input);
+        border: 1px solid rgba(139, 92, 246, 0.45);
+        background: linear-gradient(180deg, #9d6ff0 0%, var(--accent) 100%);
+        color: #fff;
+        font-weight: 700;
+        font-size: 0.9375rem;
+        letter-spacing: 0.01em;
+        cursor: pointer;
+        box-shadow: 0 8px 24px rgba(139, 92, 246, 0.25);
+      }
+      button[type="submit"]:hover { filter: brightness(1.06); transform: translate3d(0, -2px, 0); }
+      button[type="submit"]:active { transform: translate3d(0, 0, 0); transition-duration: var(--t-press); }
+      button[type="submit"]:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+
+      /* Inline SVG animations */
+      .anim {
+        width: 40px;
+        height: 40px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .spinner {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        border: 3px solid rgba(255, 255, 255, 0.14);
+        border-top-color: rgba(139, 92, 246, 0.9);
+        animation: spin 900ms linear infinite;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      .check svg, .cross svg { width: 34px; height: 34px; }
+      .check path {
+        stroke-dasharray: 60;
+        stroke-dashoffset: 60;
+        animation: draw 420ms ease-out forwards;
+      }
+      .cross path {
+        stroke-dasharray: 45;
+        stroke-dashoffset: 45;
+        animation: draw 380ms ease-out forwards;
+      }
+      @keyframes draw { to { stroke-dashoffset: 0; } }
+
+      .hint {
+        font-size: 0.75rem;
+        color: var(--muted2);
+        margin-top: 10px;
+        line-height: 1.4;
+      }
+      .status {
+        margin-top: 14px;
+        font-size: 0.8125rem;
+        white-space: pre-wrap;
+        color: rgba(255, 255, 255, 0.78);
+        padding: 10px 12px;
+        border-radius: var(--radius-input);
+        background: rgba(0, 0, 0, 0.25);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        min-height: 0;
+        text-align: left;
+      }
+      .status:empty { display: none; }
+      .status-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+      }
+      .status-text { flex: 1; }
+
+      /* Step indicator + progress bar */
+      .stepper {
+        display: none;
+        margin-top: 12px;
+        padding: 10px 12px;
+        border-radius: var(--radius-input);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        background: rgba(0, 0, 0, 0.22);
+      }
+      .stepper.is-visible { display: block; }
+      .steps-line {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        font-size: 0.75rem;
+        color: rgba(255, 255, 255, 0.7);
+        margin-bottom: 10px;
+      }
+      .steps-line span {
+        padding: 4px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.04);
+      }
+      .steps-line span.is-active {
+        border-color: rgba(139, 92, 246, 0.45);
+        background: rgba(139, 92, 246, 0.14);
+        color: rgba(255, 255, 255, 0.92);
+      }
+      .bar {
+        height: 8px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.06);
+        overflow: hidden;
+        position: relative;
+      }
+      .bar::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        transform: translateX(-50%);
+        background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.55), transparent);
+        animation: slide 1.1s ease-in-out infinite;
+      }
+      @keyframes slide {
+        0% { transform: translateX(-60%); }
+        100% { transform: translateX(60%); }
+      }
+
+      /* Toasts */
+      .toasts {
+        position: fixed;
+        right: 18px;
+        bottom: 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 1200;
+        width: min(420px, calc(100vw - 36px));
+        pointer-events: none;
+      }
+
+      /* Full-page drag overlay */
+      .drag-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 2000;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 22px;
+        background: rgba(0, 0, 0, 0.62);
+        backdrop-filter: blur(10px);
+      }
+      .drag-overlay.is-on { display: flex; }
+      .drag-overlay-card {
+        width: min(860px, 100%);
+        border-radius: 26px;
+        border: 1px solid rgba(139, 92, 246, 0.28);
+        background: linear-gradient(180deg, rgba(20, 18, 32, 0.78), rgba(10, 9, 18, 0.86));
+        box-shadow: 0 40px 120px rgba(0, 0, 0, 0.72);
+        padding: 22px;
+        text-align: center;
+        transform: translate3d(0, 10px, 0) scale(0.98);
+        opacity: 0;
+        transition: transform var(--t-ui) var(--ease-spring), opacity var(--t-ui) var(--ease-standard), border-color var(--t-ui) var(--ease-standard), box-shadow var(--t-ui) var(--ease-standard);
+      }
+      .drag-overlay.is-on .drag-overlay-card {
+        transform: translate3d(0, 0, 0) scale(1);
+        opacity: 1;
+      }
+      .drag-overlay-title {
+        font-size: 1.15rem;
+        font-weight: 850;
+        letter-spacing: -0.03em;
+        margin: 0;
+      }
+      .drag-overlay-sub {
+        margin: 8px 0 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+        line-height: 1.4;
+      }
+      .drag-overlay-zone {
+        margin-top: 16px;
+        border-radius: 22px;
+        border: 2px dashed rgba(139, 92, 246, 0.55);
+        background: rgba(139, 92, 246, 0.08);
+        padding: 26px 18px;
+        box-shadow: 0 0 0 6px rgba(139, 92, 246, 0.08);
+      }
+      .drag-overlay-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 14px;
+        border-radius: 999px;
+        border: 1px solid rgba(255,255,255,.12);
+        background: rgba(0,0,0,.20);
+        color: rgba(255,255,255,.9);
+        font-weight: 750;
+        font-size: 0.9rem;
+      }
+      .drag-overlay-badge svg { width: 18px; height: 18px; opacity: .95; }
+      .toast {
+        pointer-events: auto;
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: linear-gradient(180deg, rgba(20, 18, 32, 0.98), rgba(10, 9, 18, 0.99));
+        box-shadow: 0 26px 70px rgba(0, 0, 0, 0.65);
+        padding: 12px 12px;
+        display: grid;
+        grid-template-columns: 34px 1fr 32px;
+        gap: 10px;
+        align-items: start;
+        opacity: 0;
+        transform: translateY(8px);
+        transition: opacity 220ms ease, transform 220ms ease;
+      }
+      .toast.is-in { opacity: 1; transform: translateY(0); }
+      .toast-title { font-size: 0.8125rem; font-weight: 750; margin: 0 0 2px; color: rgba(255, 255, 255, 0.92); }
+      .toast-msg { font-size: 0.75rem; color: rgba(255, 255, 255, 0.7); line-height: 1.35; margin: 0; }
+      .toast-close {
+        width: 32px;
+        height: 32px;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.06);
+        color: rgba(255, 255, 255, 0.9);
+        cursor: pointer;
+      }
+      .toast-close:hover { background: rgba(255, 255, 255, 0.1); }
+      .toast-icon {
+        width: 34px;
+        height: 34px;
+        border-radius: 12px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      .toast.toast-success .toast-icon { background: rgba(139, 92, 246, 0.14); border-color: rgba(139, 92, 246, 0.35); }
+      .toast.toast-error .toast-icon { background: rgba(252, 165, 165, 0.10); border-color: rgba(252, 165, 165, 0.25); }
+      code {
+        padding: 2px 6px;
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        font-size: 0.85em;
+      }
+
+      /* Modal */
+      .modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.65);
+        backdrop-filter: blur(6px);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        padding: 20px;
+      }
+      .modal-backdrop.is-open { display: flex; }
+      .modal {
+        width: 100%;
+        max-width: 420px;
+        border-radius: var(--radius-card);
+        border: 1px solid var(--stroke);
+        background: linear-gradient(180deg, rgba(20, 18, 32, 0.98), rgba(10, 9, 18, 0.99));
+        box-shadow: 0 32px 80px rgba(0, 0, 0, 0.6);
+        padding: 22px 22px 20px;
+        max-height: 90vh;
+        overflow: auto;
+      }
+      .modal-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+      .modal-header h3 {
+        margin: 0;
+        font-size: 1.125rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+      .modal-close {
+        border: none;
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--text);
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 1.1rem;
+        line-height: 1;
+        flex-shrink: 0;
+      }
+      .modal-close:hover { background: rgba(255, 255, 255, 0.12); }
+
+      .tabs {
+        display: flex;
+        gap: 6px;
+        margin-bottom: 16px;
+      }
+      .tabs button {
+        flex: 1;
+        padding: 8px 10px;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: transparent;
+        color: var(--muted);
+        font-size: 0.8125rem;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .tabs button.is-active {
+        border-color: rgba(139, 92, 246, 0.45);
+        background: rgba(139, 92, 246, 0.12);
+        color: #fff;
+      }
+
+      .modal-error {
+        font-size: 0.8125rem;
+        color: #fca5a5;
+        margin-bottom: 10px;
+        min-height: 1.2em;
+      }
+      .modal-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 16px;
+      }
+      .modal-actions button[type="submit"] {
+        margin-top: 0;
+        flex: 1;
+      }
+      .modal-actions .btn-ghost { width: auto; margin-top: 0; }
+
+      .cabinet-user {
+        font-size: 0.875rem;
+        color: var(--muted);
+        margin-bottom: 12px;
+      }
+      .cabinet-user strong { color: #fff; }
+      .cabinet-history {
+        text-align: left;
+        margin-top: 12px;
+        max-height: 220px;
+        overflow-y: auto;
+      }
+      .cabinet-history ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      .cabinet-history li {
+        font-size: 0.8125rem;
+        padding: 10px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        color: var(--muted);
+      }
+      .cabinet-history li:last-child { border-bottom: none; }
+
+      /* —— Светлая тема: приглушённый сине-серый + мягкий фон —— */
+      html[data-theme="light"] {
+        color-scheme: light;
+        --bg: #e8ebf1;
+        --bg-deep: #d9dee7;
+        --bg-glow: rgba(61, 88, 118, 0.1);
+        --text: rgba(35, 48, 62, 0.92);
+        --muted: rgba(71, 85, 102, 0.76);
+        --muted2: rgba(90, 103, 118, 0.6);
+        --accent: #4a6280;
+        --accent-dim: rgba(61, 88, 118, 0.28);
+        --card: rgba(255, 255, 255, 0.82);
+        --stroke: rgba(35, 48, 62, 0.09);
+        --input-bg: #f5f6f8;
+        --panel-a: #fafbfc;
+        --panel-b: #f0f2f6;
+        --panel-a-soft: rgba(250, 251, 252, 0.95);
+        --panel-b-soft: #e8ecf2;
+        --shadow-elevated: rgba(30, 40, 52, 0.08);
+        --shadow-elevated-lg: rgba(30, 40, 52, 0.13);
+      }
+      html[data-theme="light"] body {
+        background-image:
+          radial-gradient(ellipse 900px 700px at 100% -10%, var(--bg-glow), transparent 55%),
+          linear-gradient(165deg, var(--bg) 0%, #dfe5ec 48%, var(--bg-deep) 100%);
+      }
+      html[data-theme="light"] .theme-toggle {
+        border-color: rgba(15, 23, 42, 0.12);
+        color: rgba(15, 23, 42, 0.88);
+        box-shadow: 0 10px 28px rgba(61, 88, 118, 0.08);
+      }
+      html[data-theme="light"] .top { border-bottom-color: var(--stroke); }
+      html[data-theme="light"] .btn-ghost {
+        border-color: rgba(15, 23, 42, 0.12);
+        background: rgba(255, 255, 255, 0.72);
+        color: rgba(15, 23, 42, 0.88);
+      }
+      html[data-theme="light"] .btn-ghost:hover { background: rgba(255, 255, 255, 0.95); }
+      html[data-theme="light"] .btn-ghost.primary {
+        border-color: rgba(61, 88, 118, 0.45);
+        color: #2c3d4f;
+        background: rgba(61, 88, 118, 0.1);
+      }
+      html[data-theme="light"] .btn-ghost.primary:hover { background: rgba(61, 88, 118, 0.16); }
+      html[data-theme="light"] .btn-ghost.danger {
+        border-color: rgba(220, 38, 38, 0.35);
+        background: rgba(254, 226, 226, 0.5);
+        color: #7f1d1d;
+      }
+      @media (hover: hover) {
+        html[data-theme="light"] .steps li:hover { background: rgba(61, 88, 118, 0.06); }
+      }
+      html[data-theme="light"] .step-num {
+        color: var(--accent);
+        background: rgba(61, 88, 118, 0.1);
+        border-color: rgba(61, 88, 118, 0.35);
+      }
+      html[data-theme="light"] .step-body strong { color: rgba(15, 23, 42, 0.88); }
+      @media (hover: hover) {
+        html[data-theme="light"] .card:hover {
+          border-color: rgba(61, 88, 118, 0.28);
+          box-shadow: 0 28px 78px var(--shadow-elevated-lg);
+        }
+      }
+      html[data-theme="light"] .faq-fab {
+        border-color: rgba(15, 23, 42, 0.12);
+        background: linear-gradient(180deg, #fafbfc, #e8ecf2);
+        color: rgba(15, 23, 42, 0.9);
+        box-shadow: 0 20px 50px rgba(61, 88, 118, 0.12);
+      }
+      html[data-theme="light"] .faq-fab-badge {
+        background: rgba(61, 88, 118, 0.12);
+        border-color: rgba(61, 88, 118, 0.35);
+      }
+      html[data-theme="light"] .faq-fab-label { color: rgba(15, 23, 42, 0.85); }
+      html[data-theme="light"] label { color: rgba(15, 23, 42, 0.88); }
+      html[data-theme="light"] .dropzone {
+        border-color: rgba(15, 23, 42, 0.15);
+        background: rgba(255, 255, 255, 0.55);
+      }
+      html[data-theme="light"] .dropzone:hover {
+        border-color: rgba(61, 88, 118, 0.5);
+        background: rgba(255, 255, 255, 0.85);
+      }
+      html[data-theme="light"] .dropzone.is-dragover {
+        border-color: rgba(61, 88, 118, 0.75);
+        box-shadow: 0 0 0 3px rgba(61, 88, 118, 0.12);
+      }
+      html[data-theme="light"] .help-btn {
+        border-color: rgba(15, 23, 42, 0.12);
+        background: rgba(255, 255, 255, 0.8);
+        color: rgba(15, 23, 42, 0.85);
+      }
+      html[data-theme="light"] .help-btn:hover { background: rgba(255, 255, 255, 1); }
+      html[data-theme="light"] .help-tip {
+        border-color: rgba(15, 23, 42, 0.1);
+        background: linear-gradient(180deg, #fafbfc, #eceff3);
+        color: rgba(30, 41, 59, 0.85);
+        box-shadow: 0 22px 60px rgba(15, 23, 42, 0.12);
+      }
+      html[data-theme="light"] .dropzone-title { color: rgba(15, 23, 42, 0.9); }
+      html[data-theme="light"] .file-chip {
+        border-color: rgba(15, 23, 42, 0.08);
+        background: rgba(255, 255, 255, 0.75);
+      }
+      html[data-theme="light"] .file-chip-name { color: rgba(15, 23, 42, 0.88); }
+      html[data-theme="light"] .chip-btn {
+        border-color: rgba(15, 23, 42, 0.12);
+        background: rgba(255, 255, 255, 0.9);
+        color: rgba(15, 23, 42, 0.85);
+      }
+      html[data-theme="light"] input[type="text"],
+      html[data-theme="light"] input[type="password"],
+      html[data-theme="light"] select {
+        border-color: rgba(15, 23, 42, 0.12);
+      }
+      html[data-theme="light"] input[type="file"]::file-selector-button {
+        border-color: rgba(15, 23, 42, 0.12);
+        background: rgba(232, 236, 242, 0.95);
+        color: rgba(15, 23, 42, 0.85);
+      }
+      html[data-theme="light"] input:focus,
+      html[data-theme="light"] select:focus {
+        border-color: rgba(61, 88, 118, 0.55);
+        box-shadow: 0 0 0 3px rgba(61, 88, 118, 0.12);
+      }
+      html[data-theme="light"] .lang-picker-btn {
+        border-color: rgba(15, 23, 42, 0.12);
+        background: var(--input-bg);
+        color: var(--text);
+      }
+      html[data-theme="light"] .lang-picker-btn:hover {
+        border-color: rgba(61, 88, 118, 0.35);
+        background: rgba(242, 244, 248, 0.96);
+      }
+      html[data-theme="light"] .lang-picker-btn:focus-visible {
+        border-color: rgba(61, 88, 118, 0.55);
+        box-shadow: 0 0 0 3px rgba(61, 88, 118, 0.12);
+      }
+      html[data-theme="light"] .lang-picker-panel {
+        border-color: rgba(15, 23, 42, 0.12);
+        background: linear-gradient(180deg, #fafbfc, #eaeef3);
+        box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12);
+      }
+      html[data-theme="light"] .lang-picker-search {
+        border-color: rgba(15, 23, 42, 0.12);
+        background: #f5f6f8;
+        color: var(--text);
+      }
+      html[data-theme="light"] .lang-picker-search:focus {
+        border-color: rgba(61, 88, 118, 0.45);
+        box-shadow: 0 0 0 2px rgba(61, 88, 118, 0.1);
+      }
+      html[data-theme="light"] .lang-picker-row { color: rgba(15, 23, 42, 0.92); }
+      html[data-theme="light"] .lang-picker-option[aria-selected="true"] {
+        background: rgba(61, 88, 118, 0.12);
+      }
+      html[data-theme="light"] .row {
+        background: rgba(255, 255, 255, 0.65);
+        border-color: rgba(15, 23, 42, 0.08);
+      }
+      html[data-theme="light"] button[type="submit"] {
+        border-color: rgba(44, 61, 78, 0.5);
+        background: linear-gradient(180deg, #7a90a5 0%, #3d546c 100%);
+        color: #f4f6f9;
+        box-shadow: 0 10px 26px rgba(32, 44, 58, 0.2);
+      }
+      html[data-theme="light"] button[type="submit"]:hover {
+        filter: brightness(1.04);
+      }
+      html[data-theme="light"] .spinner {
+        border-color: rgba(15, 23, 42, 0.12);
+        border-top-color: rgba(61, 88, 118, 0.85);
+      }
+      html[data-theme="light"] .status {
+        color: rgba(30, 41, 59, 0.88);
+        background: rgba(255, 255, 255, 0.75);
+        border-color: rgba(15, 23, 42, 0.08);
+      }
+      html[data-theme="light"] .stepper {
+        border-color: rgba(15, 23, 42, 0.08);
+        background: rgba(255, 255, 255, 0.6);
+      }
+      html[data-theme="light"] .steps-line { color: rgba(51, 65, 85, 0.85); }
+      html[data-theme="light"] .steps-line span {
+        border-color: rgba(15, 23, 42, 0.08);
+        background: rgba(255, 255, 255, 0.7);
+      }
+      html[data-theme="light"] .steps-line span.is-active {
+        border-color: rgba(61, 88, 118, 0.45);
+        background: rgba(61, 88, 118, 0.12);
+        color: rgba(15, 23, 42, 0.92);
+      }
+      html[data-theme="light"] .bar { background: rgba(15, 23, 42, 0.06); }
+      html[data-theme="light"] .bar::after {
+        background: linear-gradient(90deg, transparent, rgba(61, 88, 118, 0.45), transparent);
+      }
+      html[data-theme="light"] .drag-overlay { background: rgba(15, 23, 42, 0.35); }
+      html[data-theme="light"] .drag-overlay-card {
+        border-color: rgba(61, 88, 118, 0.3);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), #e8ecf2);
+        box-shadow: 0 40px 100px rgba(15, 23, 42, 0.15);
+      }
+      html[data-theme="light"] .drag-overlay-title { color: rgba(15, 23, 42, 0.92); }
+      html[data-theme="light"] .drag-overlay-zone {
+        border-color: rgba(61, 88, 118, 0.45);
+        background: rgba(61, 88, 118, 0.06);
+        box-shadow: 0 0 0 6px rgba(61, 88, 118, 0.06);
+      }
+      html[data-theme="light"] .drag-overlay-badge {
+        border-color: rgba(15, 23, 42, 0.1);
+        background: rgba(255, 255, 255, 0.9);
+        color: rgba(15, 23, 42, 0.88);
+      }
+      html[data-theme="light"] .toast {
+        border-color: rgba(15, 23, 42, 0.1);
+        background: linear-gradient(180deg, #fafbfc, #eceff3);
+        box-shadow: 0 22px 55px rgba(15, 23, 42, 0.12);
+      }
+      html[data-theme="light"] .toast-title { color: rgba(15, 23, 42, 0.92); }
+      html[data-theme="light"] .toast-msg { color: rgba(51, 65, 85, 0.8); }
+      html[data-theme="light"] .toast-close {
+        border-color: rgba(15, 23, 42, 0.1);
+        background: rgba(255, 255, 255, 0.9);
+        color: rgba(15, 23, 42, 0.85);
+      }
+      html[data-theme="light"] .toast-icon {
+        background: rgba(255, 255, 255, 0.9);
+        border-color: rgba(15, 23, 42, 0.08);
+      }
+      html[data-theme="light"] .toast.toast-success .toast-icon {
+        background: rgba(61, 88, 118, 0.12);
+        border-color: rgba(61, 88, 118, 0.35);
+      }
+      html[data-theme="light"] code {
+        background: rgba(15, 23, 42, 0.06);
+        border-color: rgba(15, 23, 42, 0.1);
+        color: rgba(15, 23, 42, 0.88);
+      }
+      html[data-theme="light"] .modal-backdrop { background: rgba(15, 23, 42, 0.45); }
+      html[data-theme="light"] .modal {
+        background: linear-gradient(180deg, #fafbfc, #eaeef3);
+        box-shadow: 0 32px 80px rgba(15, 23, 42, 0.15);
+      }
+      html[data-theme="light"] .modal-close {
+        background: rgba(15, 23, 42, 0.06);
+        color: rgba(15, 23, 42, 0.88);
+      }
+      html[data-theme="light"] .modal-close:hover { background: rgba(15, 23, 42, 0.1); }
+      html[data-theme="light"] .tabs button {
+        border-color: rgba(15, 23, 42, 0.1);
+        color: var(--muted);
+      }
+      html[data-theme="light"] .tabs button.is-active {
+        border-color: rgba(61, 88, 118, 0.45);
+        background: rgba(61, 88, 118, 0.1);
+        color: #2c3d4f;
+      }
+      html[data-theme="light"] .modal-error { color: #b91c1c; }
+      html[data-theme="light"] .cabinet-user strong { color: rgba(15, 23, 42, 0.92); }
+      html[data-theme="light"] .cabinet-history li { border-bottom-color: rgba(15, 23, 42, 0.08); }
+      html[data-theme="light"] :focus-visible {
+        box-shadow: 0 0 0 3px rgba(61, 88, 118, 0.2);
+      }
+
+      html[data-theme="light"] * {
+        scrollbar-color: rgba(61, 88, 118, 0.55) rgba(15, 23, 42, 0.07);
+      }
+      html[data-theme="light"] *::-webkit-scrollbar-track {
+        background: rgba(15, 23, 42, 0.06);
+      }
+      html[data-theme="light"] *::-webkit-scrollbar-thumb {
+        background: linear-gradient(180deg, rgba(100, 125, 155, 0.55), rgba(61, 88, 118, 0.42));
+        border: 2px solid rgba(248, 250, 252, 0.85);
+        background-clip: padding-box;
+      }
+      html[data-theme="light"] *::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(180deg, rgba(120, 145, 175, 0.65), rgba(61, 88, 118, 0.55));
+      }
+
+      /* Мобильная вёрстка: шапка, форма, модалки, тосты */
+      @media (max-width: 600px) {
+        .top {
+          flex-direction: column;
+          align-items: stretch;
+          gap: 14px;
+          margin-bottom: 22px;
+          padding-bottom: 16px;
+        }
+        .brand {
+          gap: 12px;
+          min-width: 0;
+        }
+        .titleWrap {
+          min-width: 0;
+        }
+        h1 {
+          font-size: clamp(1.6rem, 7.5vw, 2rem);
+          line-height: 1.08;
+        }
+        .top-actions {
+          width: 100%;
+          justify-content: stretch;
+          gap: 8px;
+        }
+        .top-actions .btn-ghost {
+          flex: 1 1 0;
+          min-width: 0;
+          justify-content: center;
+          padding: 12px 10px;
+          min-height: 44px;
+          font-size: 0.8125rem;
+        }
+        #btnCabinet {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .main {
+          gap: 22px;
+        }
+        .hero h2 {
+          font-size: clamp(1.28rem, 5.5vw, 1.6rem);
+        }
+        .hero .lead {
+          max-width: none;
+          font-size: 0.9375rem;
+          margin-bottom: 22px;
+        }
+        .steps {
+          gap: 12px;
+        }
+        .steps li {
+          margin-left: 0;
+          padding: 10px 12px;
+        }
+        .card-body {
+          padding: 18px 14px;
+        }
+        .card .intro {
+          font-size: 0.875rem;
+          padding-right: 40px;
+        }
+        .dropzone {
+          padding: 16px 14px;
+        }
+        .dropzone-top {
+          flex-direction: column;
+          align-items: stretch;
+          gap: 12px;
+        }
+        .dropzone-title {
+          font-size: 0.9375rem;
+        }
+        .dropzone-actions {
+          width: 100%;
+        }
+        #dropzonePickBtn {
+          width: 100%;
+          min-height: 44px;
+          padding: 10px 14px;
+        }
+        .card-help {
+          right: 10px;
+          top: 12px;
+        }
+        .help-btn {
+          width: 40px;
+          height: 40px;
+          min-width: 44px;
+          min-height: 44px;
+        }
+        .help-tip {
+          right: auto;
+          left: 50%;
+          transform: translateX(-50%);
+          width: min(calc(100vw - 24px), 400px);
+        }
+        .file-chip {
+          flex-wrap: wrap;
+        }
+        .file-chip-name {
+          white-space: normal;
+          word-break: break-word;
+        }
+        .row {
+          padding: 14px 12px;
+          gap: 12px;
+        }
+        .lang-picker-btn,
+        .lang-picker-search {
+          font-size: 16px;
+          padding: 12px 14px;
+          min-height: 48px;
+        }
+        .lang-picker-list {
+          max-height: min(50dvh, 340px);
+        }
+        .lang-picker-row {
+          min-height: 48px;
+          padding: 12px 12px;
+        }
+        input[type="text"],
+        input[type="password"] {
+          font-size: 16px;
+          padding: 12px 14px;
+          min-height: 48px;
+        }
+        button[type="submit"] {
+          min-height: 48px;
+          font-size: 1rem;
+          padding: 14px 16px;
+        }
+        .status {
+          font-size: 0.875rem;
+        }
+        .steps-line {
+          justify-content: center;
+          gap: 8px;
+        }
+        .steps-line span {
+          font-size: 0.6875rem;
+          padding: 6px 8px;
+        }
+        .modal-backdrop {
+          align-items: flex-end;
+          padding: 0;
+          padding-bottom: env(safe-area-inset-bottom, 0px);
+        }
+        .modal {
+          max-width: 100%;
+          width: 100%;
+          border-radius: 20px 20px 0 0;
+          max-height: min(90dvh, 100%);
+          padding: 18px max(16px, env(safe-area-inset-right, 0px)) max(20px, calc(env(safe-area-inset-bottom, 0px) + 8px))
+            max(16px, env(safe-area-inset-left, 0px));
+        }
+        .modal-header h3 {
+          font-size: 1.05rem;
+        }
+        .modal-close {
+          width: 44px;
+          height: 44px;
+          min-width: 44px;
+          min-height: 44px;
+        }
+        .tabs button {
+          min-height: 44px;
+          font-size: 0.875rem;
+        }
+        .modal-actions .btn-ghost {
+          min-height: 44px;
+          flex: 1;
+        }
+        .cabinet-history {
+          max-height: min(40dvh, 280px);
+        }
+        .toasts {
+          left: max(12px, env(safe-area-inset-left, 0px));
+          right: max(12px, env(safe-area-inset-right, 0px));
+          width: auto;
+          bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+        }
+        .faq-fab {
+          padding: 10px 12px;
+        }
+        .faq-fab-label {
+          display: none;
+        }
+        .faq-fab-badge {
+          width: 38px;
+          height: 38px;
+        }
+        .drag-overlay {
+          padding: max(16px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom))
+            max(12px, env(safe-area-inset-left));
+        }
+        .drag-overlay-card {
+          padding: 18px 14px;
+        }
+        .drag-overlay-title {
+          font-size: 1.05rem;
+        }
+        #faqModal .faq-summary {
+          min-height: 44px;
+          display: flex;
+          align-items: center;
+          padding: 8px 0;
+          -webkit-tap-highlight-color: rgba(139, 92, 246, 0.15);
+        }
+      }
+
+      /* Focus + reduced motion */
+      :focus-visible {
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.18);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+        .dropzone.is-dragover { transform: none; }
+        .toast { transform: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <button type="button" class="theme-toggle" id="btnTheme" aria-label="Включить светлую тему" title="Тема оформления">
+      <svg class="icon-sun" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="2" />
+        <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+      </svg>
+      <svg class="icon-moon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+    </button>
+    <div class="wrap">
+      <header class="top">
+        <div class="brand">
+          <img class="logo-img" src="/static/logo.png" alt="translide" />
+          <div class="titleWrap">
+            <h1>translide</h1>
+          </div>
+        </div>
+        <div class="top-actions">
+          <button type="button" class="btn-ghost primary" id="btnAuth">Войти</button>
+          <button type="button" class="btn-ghost primary" id="btnCabinet" hidden aria-label="Аккаунт"></button>
+          <button type="button" class="btn-ghost" id="btnLogout" hidden>Выйти</button>
+        </div>
+      </header>
+
+      <div class="main">
+        <section class="hero" aria-labelledby="hero-title">
+          <h2 id="hero-title">Презентация на том языке, который нужен</h2>
+          <p class="lead">
+            Загрузи файл — получишь ту же структуру слайдов, но с переведённым текстом. Без лишних шагов.
+          </p>
+          <ol class="steps" role="list">
+            <li>
+              <span class="step-num">1</span>
+              <div class="step-body">
+                <strong>Выбери файл</strong>
+                <span>Поддерживаются распространённые форматы презентаций.</span>
+              </div>
+            </li>
+            <li>
+              <span class="step-num">2</span>
+              <div class="step-body">
+                <strong>Укажи языки</strong>
+                <span>Укажи язык оригинала и язык, на который нужен перевод.</span>
+              </div>
+            </li>
+            <li>
+              <span class="step-num">3</span>
+              <div class="step-body">
+                <strong>Скачай результат</strong>
+                <span>Готовый файл скачивается сразу после обработки.</span>
+              </div>
+            </li>
+            <li>
+              <span class="step-num">4</span>
+              <div class="step-body">
+                <strong>История переводов</strong>
+                <span>Смотрите историю переводов в личном кабинете.</span>
+              </div>
+            </li>
+          </ol>
+        </section>
+
+        <div class="card">
+          <div class="card-body">
+            <div class="card-help">
+              <div class="help-btn" tabindex="0" aria-label="Подсказка" title="Подсказка">?</div>
+              <div class="help-tip" role="tooltip">
+                Поддерживаемые форматы: <code>.pptx</code>, <code>.ppt</code>, <code>.odp</code>. История переводов доступна в личном кабинете для авторизованных пользователей.
+              </div>
+            </div>
+            <p class="intro">Заполни форму и нажми кнопку — файл с переводом скачается автоматически.</p>
+
+            <form id="f" novalidate>
+              <label for="file">Файл презентации</label>
+
+              <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Загрузить файл презентации">
+                <div class="dropzone-top">
+                  <div class="dropzone-title">Перетащи файл сюда</div>
+                  <div class="dropzone-actions">
+                    <button type="button" class="btn-ghost" id="dropzonePickBtn">Выбрать файл</button>
+                  </div>
+                </div>
+                <div class="dropzone-sub">Переводим текст и возвращаем файл в том же формате.</div>
+                <p id="dropzoneAlert" class="dropzone-alert" role="alert"></p>
+
+                <div class="file-chip" id="fileChip" aria-live="polite">
+                  <div class="file-chip-meta">
+                    <div class="file-chip-name" id="fileChipName">—</div>
+                    <div class="file-chip-size" id="fileChipSize"></div>
+                  </div>
+                  <div class="file-chip-actions">
+                    <button type="button" class="chip-btn" id="fileChipClear" aria-label="Убрать файл" title="Убрать">×</button>
+                  </div>
+                </div>
+              </div>
+
+              <input id="file" name="file" type="file" accept=".ppt,.pps,.pot,.pptx,.ppsx,.potx,.odp" required hidden />
+
+              <div class="row">
+                <p id="langLoadStatus" class="lang-load-status hint" role="status" aria-live="polite"></p>
+                <div>
+                  <label for="sourceLangBtn">Исходный язык</label>
+                  <div class="lang-picker-inner" id="sourceComboWrap" aria-busy="true">
+                    <select id="source" name="source_lang" class="combo-native-select" tabindex="-1" aria-hidden="true">
+                      <option value="">Загрузка языков…</option>
+                    </select>
+                    <button
+                      type="button"
+                      class="lang-picker-btn"
+                      id="sourceLangBtn"
+                      aria-haspopup="listbox"
+                      aria-expanded="false"
+                      aria-controls="sourceListbox"
+                      disabled
+                    >
+                      <span class="lang-picker-btn-main">
+                        <span class="lang-picker-btn-text">Загрузка языков…</span>
+                        <span class="lang-picker-btn-flag" aria-hidden="true">🌐</span>
+                      </span>
+                      <span class="lang-picker-chevron" aria-hidden="true">▾</span>
+                    </button>
+                    <div class="lang-picker-panel" id="sourceLangPanel" hidden>
+                      <input
+                        type="search"
+                        class="lang-picker-search"
+                        id="sourceLangSearch"
+                        placeholder="Найти язык…"
+                        aria-label="Поиск языка"
+                        autocomplete="off"
+                      />
+                      <ul id="sourceListbox" class="lang-picker-list" role="listbox"></ul>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <label for="targetLangBtn">Целевой язык</label>
+                  <div class="lang-picker-inner" id="targetComboWrap" aria-busy="true">
+                    <select id="target" name="target_lang" class="combo-native-select" tabindex="-1" aria-hidden="true">
+                      <option value="">Загрузка языков…</option>
+                    </select>
+                    <button
+                      type="button"
+                      class="lang-picker-btn"
+                      id="targetLangBtn"
+                      aria-haspopup="listbox"
+                      aria-expanded="false"
+                      aria-controls="targetListbox"
+                      disabled
+                    >
+                      <span class="lang-picker-btn-main">
+                        <span class="lang-picker-btn-text">Загрузка языков…</span>
+                        <span class="lang-picker-btn-flag" aria-hidden="true">🌐</span>
+                      </span>
+                      <span class="lang-picker-chevron" aria-hidden="true">▾</span>
+                    </button>
+                    <div class="lang-picker-panel" id="targetLangPanel" hidden>
+                      <input
+                        type="search"
+                        class="lang-picker-search"
+                        id="targetLangSearch"
+                        placeholder="Найти язык…"
+                        aria-label="Поиск языка"
+                        autocomplete="off"
+                      />
+                      <ul id="targetListbox" class="lang-picker-list" role="listbox"></ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <button id="btn" type="submit" aria-describedby="status">Перевести и скачать</button>
+              <div id="status" class="status"></div>
+              <div class="stepper" id="stepper" aria-live="polite">
+                <div class="steps-line" aria-hidden="true">
+                  <span id="stepExtract">Извлекаю</span>
+                  <span id="stepTranslate">Перевожу</span>
+                  <span id="stepBuild">Собираю</span>
+                </div>
+                <div class="bar" aria-hidden="true"></div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Auth modal -->
+    <div class="modal-backdrop" id="authModal" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
+      <div class="modal">
+        <div class="modal-header">
+          <h3 id="authModalTitle">Вход</h3>
+          <button type="button" class="modal-close" id="authModalClose" aria-label="Закрыть">×</button>
+        </div>
+        <div class="tabs" role="tablist">
+          <button type="button" class="is-active" id="tabLogin" role="tab" aria-selected="true">Вход</button>
+          <button type="button" id="tabRegister" role="tab" aria-selected="false">Регистрация</button>
+        </div>
+        <div class="modal-error" id="authError"></div>
+        <form id="authForm">
+          <label for="authUser">Логин</label>
+          <input id="authUser" name="username" type="text" autocomplete="username" required minlength="3" maxlength="32" />
+          <div id="authNameFields" style="display: none;">
+            <div class="row" style="padding: 0; background: transparent; border: 0; margin-top: 12px;">
+              <div>
+                <label for="authFirst">Имя</label>
+                <input id="authFirst" name="first_name" type="text" autocomplete="given-name" maxlength="40" />
+              </div>
+              <div>
+                <label for="authLast">Фамилия</label>
+                <input id="authLast" name="last_name" type="text" autocomplete="family-name" maxlength="40" />
+              </div>
+            </div>
+          </div>
+          <label for="authPass">Пароль</label>
+          <input id="authPass" name="password" type="password" autocomplete="current-password" required minlength="6" />
+          <div class="modal-actions">
+            <button type="submit" id="authSubmit">Войти</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Cabinet modal -->
+    <div class="modal-backdrop" id="cabinetModal" role="dialog" aria-modal="true" aria-labelledby="cabinetTitle">
+      <div class="modal">
+        <div class="modal-header">
+          <h3 id="cabinetTitle">Личный кабинет</h3>
+          <button type="button" class="modal-close" id="cabinetModalClose" aria-label="Закрыть">×</button>
+        </div>
+        <p class="cabinet-user" id="cabinetUserLine"></p>
+        <div class="history-title" style="text-align: left; margin-bottom: 8px;">История переводов</div>
+        <div class="cabinet-history" id="cabinetHistory">
+          <ul id="cabinetHistoryList"></ul>
+        </div>
+        <div class="modal-actions" style="margin-top: 16px;">
+          <button type="button" class="btn-ghost" id="cabinetLogout">Выйти</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- FAQ modal -->
+    <div class="modal-backdrop" id="faqModal" role="dialog" aria-modal="true" aria-labelledby="faqTitle">
+      <div class="modal">
+        <div class="modal-header">
+          <h3 id="faqTitle">FAQ</h3>
+          <button type="button" class="modal-close" id="faqModalClose" aria-label="Закрыть">×</button>
+        </div>
+
+        <div class="hint" style="margin-top: 0; margin-bottom: 10px;">
+          Короткие ответы на частые вопросы.
+        </div>
+
+        <div style="display: grid; gap: 10px;">
+          <details open>
+            <summary class="faq-summary">Это конфиденциально?</summary>
+            <div class="hint">
+              Мы не сохраняем файл презентации на диск: он обрабатывается и сразу отдаётся обратно. \n
+              При этом текст отправляется в сервис перевода (провайдер), поэтому не загружайте секретные данные, если вам это критично.
+            </div>
+          </details>
+          <details>
+            <summary class="faq-summary">Что именно переводится?</summary>
+            <div class="hint">
+              Переводим текстовые блоки на слайдах. Текст внутри картинок (скриншоты/баннеры) не переводится без OCR.
+            </div>
+          </details>
+          <details>
+            <summary class="faq-summary">Какие языки доступны сейчас?</summary>
+            <div class="hint">
+              Список подгружается с сервера (тот же набор, что у LibreTranslate <code>GET /languages</code>): сначала ваш
+              <code>TRANSLATE_ENDPOINT</code>, если недоступен — каталог <code>libretranslate.com</code>. Казахский (<code>kk</code>) в списке не показываем.
+              Нужно явно выбрать исходный язык текста в презентации.
+            </div>
+          </details>
+          <details>
+            <summary class="faq-summary">Почему после перевода может «поехать» верстка?</summary>
+            <div class="hint">
+              В разных языках текст часто становится длиннее/короче. Из-за фиксированных размеров блоков он может переноситься или не помещаться.\n
+              Для важных презентаций лучше быстро пробежать глазами и при необходимости чуть поправить размеры/переносы.
+            </div>
+          </details>
+          <details>
+            <summary class="faq-summary">Сколько времени занимает перевод?</summary>
+            <div class="hint">
+              Зависит от размера презентации и скорости провайдера перевода. Обычно — от нескольких секунд до пары минут.
+            </div>
+          </details>
+          <details>
+            <summary class="faq-summary">Есть ли ограничения по размеру/количеству?</summary>
+            <div class="hint">
+              Сейчас это MVP: строгих лимитов в интерфейсе нет, но провайдер перевода может ограничивать частоту запросов.\n
+              Если упрётесь в лимиты — добавим тарифы/кредиты и очередь.
+            </div>
+          </details>
+          <details>
+            <summary class="faq-summary">Почему иногда вылезает ошибка перевода?</summary>
+            <div class="hint">
+              Обычно это: лимиты провайдера, временная недоступность сервиса или некорректный/неподдерживаемый файл.\n
+              Попробуйте повторить позже или пересохранить презентацию в <code>.pptx</code>.
+            </div>
+          </details>
+          <details>
+            <summary class="faq-summary">Почему история доступна только после входа?</summary>
+            <div class="hint">
+              История сохраняется в привязке к аккаунту и содержит только метаданные (имя файла, язык, время). Без входа мы ничего не сохраняем.
+            </div>
+          </details>
+          <details>
+            <summary class="faq-summary">Что сохраняется в истории?</summary>
+            <div class="hint">
+              Только: имя исходного файла, целевой язык и время. Сам файл в историю не кладём.
+              В личном кабинете можно открыть полный список, скачать CSV и очистить историю.
+            </div>
+          </details>
+          <details>
+            <summary class="faq-summary">Какие форматы поддерживаются?</summary>
+            <div class="hint">
+              Сейчас: <code>.pptx</code> для перевода. \n
+              <code>.ppt</code> и <code>.odp</code> можно загрузить, но перевод может быть недоступен — тогда покажем ошибку и подскажем сохранить как <code>.pptx</code>.
+            </div>
+          </details>
+          <details>
+            <summary class="faq-summary">Переводит ли текст в диаграммах/таблицах/SmartArt?</summary>
+            <div class="hint">
+              Если текст там является редактируемым текстом PowerPoint — обычно да. Если это картинка/скриншот — нет.\n
+              Для сложных презентаций лучше сделать быструю визуальную проверку после перевода.
+            </div>
+          </details>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="logoutModal" role="dialog" aria-modal="true" aria-labelledby="logoutTitle">
+      <div class="modal">
+        <div class="modal-header">
+          <h3 id="logoutTitle">Выйти из аккаунта?</h3>
+          <button type="button" class="modal-close" id="logoutModalClose" aria-label="Закрыть">×</button>
+        </div>
+        <div class="hint" style="margin-top: 0;">Вы уверены, что хотите выйти? История останется в аккаунте.</div>
+        <div class="modal-actions" style="margin-top: 14px;">
+          <button type="button" class="btn-ghost" id="logoutCancel">Отмена</button>
+          <button type="button" class="btn-ghost danger" id="logoutConfirm">Выйти</button>
+        </div>
+      </div>
+    </div>
+
+    <button type="button" class="faq-fab" id="btnFaq" aria-label="FAQ" title="FAQ">
+      <span class="faq-fab-badge">?</span>
+      <span class="faq-fab-label">FAQ</span>
+    </button>
+
+    <div class="drag-overlay" id="dragOverlay" aria-hidden="true">
+      <div class="drag-overlay-card" role="dialog" aria-label="Загрузка файла">
+        <p class="drag-overlay-title">Можете вставлять сюда</p>
+        <p class="drag-overlay-sub">Отпустите файл — он автоматически подставится в форму.</p>
+        <div class="drag-overlay-zone" aria-hidden="true">
+          <span class="drag-overlay-badge">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 3v10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M8 7l4-4 4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M4 14v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Перетащите файл на эту область
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="toasts" id="toasts" aria-live="polite" aria-relevant="additions removals"></div>
+
+    <script>
+      const TOKEN_KEY = "shinra_token";
+      const btnTheme = document.getElementById("btnTheme");
+      function syncThemeUi() {
+        if (!btnTheme) return;
+        const t = document.documentElement.getAttribute("data-theme") || "dark";
+        btnTheme.setAttribute("aria-pressed", t === "light" ? "true" : "false");
+        btnTheme.setAttribute("aria-label", t === "dark" ? "Включить светлую тему" : "Включить тёмную тему");
+        btnTheme.setAttribute("title", t === "dark" ? "Светлая тема" : "Тёмная тема");
+      }
+      if (btnTheme) {
+        btnTheme.addEventListener("click", () => {
+          const next = document.documentElement.getAttribute("data-theme") === "light" ? "dark" : "light";
+          document.documentElement.setAttribute("data-theme", next);
+          try {
+            localStorage.setItem("translide-theme", next);
+          } catch (e) {}
+          syncThemeUi();
+        });
+        syncThemeUi();
+      }
+
+      const f = document.getElementById("f");
+      const btn = document.getElementById("btn");
+      const status = document.getElementById("status");
+      const stepper = document.getElementById("stepper");
+      const stepExtract = document.getElementById("stepExtract");
+      const stepTranslate = document.getElementById("stepTranslate");
+      const stepBuild = document.getElementById("stepBuild");
+      const toasts = document.getElementById("toasts");
+      const fileInput = document.getElementById("file");
+      const dropzone = document.getElementById("dropzone");
+      const dropzonePickBtn = document.getElementById("dropzonePickBtn");
+      const dragOverlay = document.getElementById("dragOverlay");
+      const fileChip = document.getElementById("fileChip");
+      const fileChipName = document.getElementById("fileChipName");
+      const fileChipSize = document.getElementById("fileChipSize");
+      const fileChipClear = document.getElementById("fileChipClear");
+      const dropzoneAlert = document.getElementById("dropzoneAlert");
+      const langLoadStatus = document.getElementById("langLoadStatus");
+      const sourceComboWrap = document.getElementById("sourceComboWrap");
+      const targetComboWrap = document.getElementById("targetComboWrap");
+      const sourceSel = document.getElementById("source");
+      const targetSel = document.getElementById("target");
+      const sourceLangBtn = document.getElementById("sourceLangBtn");
+      const targetLangBtn = document.getElementById("targetLangBtn");
+      const sourceLangPanel = document.getElementById("sourceLangPanel");
+      const targetLangPanel = document.getElementById("targetLangPanel");
+      const sourceLangSearch = document.getElementById("sourceLangSearch");
+      const targetLangSearch = document.getElementById("targetLangSearch");
+      const sourceListbox = document.getElementById("sourceListbox");
+      const targetListbox = document.getElementById("targetListbox");
+
+      const btnAuth = document.getElementById("btnAuth");
+      const btnCabinet = document.getElementById("btnCabinet");
+      const btnLogout = document.getElementById("btnLogout");
+      const btnFaq = document.getElementById("btnFaq");
+
+      const authModal = document.getElementById("authModal");
+      const authModalClose = document.getElementById("authModalClose");
+      const tabLogin = document.getElementById("tabLogin");
+      const tabRegister = document.getElementById("tabRegister");
+      const authForm = document.getElementById("authForm");
+      const authError = document.getElementById("authError");
+      const authSubmit = document.getElementById("authSubmit");
+      const authModalTitle = document.getElementById("authModalTitle");
+      const authNameFields = document.getElementById("authNameFields");
+      const authFirst = document.getElementById("authFirst");
+      const authLast = document.getElementById("authLast");
+
+      const cabinetModal = document.getElementById("cabinetModal");
+      const cabinetModalClose = document.getElementById("cabinetModalClose");
+      const cabinetUserLine = document.getElementById("cabinetUserLine");
+      const cabinetHistoryList = document.getElementById("cabinetHistoryList");
+      const cabinetLogout = document.getElementById("cabinetLogout");
+
+      const faqModal = document.getElementById("faqModal");
+      const faqModalClose = document.getElementById("faqModalClose");
+      const logoutModal = document.getElementById("logoutModal");
+      const logoutModalClose = document.getElementById("logoutModalClose");
+      const logoutCancel = document.getElementById("logoutCancel");
+      const logoutConfirm = document.getElementById("logoutConfirm");
+
+      let authMode = "login";
+      let selectedFile = null;
+      const ACCEPT_EXT = new Set(["ppt", "pps", "pot", "pptx", "ppsx", "potx", "odp"]);
+
+      function fileExtensionOk(name) {
+        const m = /\.([a-z0-9]+)$/i.exec(name || "");
+        return Boolean(m && ACCEPT_EXT.has(m[1].toLowerCase()));
+      }
+
+      function showDropzoneAlert(msg) {
+        if (!dropzoneAlert) return;
+        dropzoneAlert.textContent = msg;
+        dropzoneAlert.classList.add("is-visible");
+      }
+      function clearDropzoneAlert() {
+        if (!dropzoneAlert) return;
+        dropzoneAlert.textContent = "";
+        dropzoneAlert.classList.remove("is-visible");
+      }
+
+      function fmtBytes(bytes) {
+        const b = Number(bytes) || 0;
+        if (b < 1024) return b + " B";
+        const kb = b / 1024;
+        if (kb < 1024) return kb.toFixed(1) + " KB";
+        const mb = kb / 1024;
+        if (mb < 1024) return mb.toFixed(1) + " MB";
+        return (mb / 1024).toFixed(2) + " GB";
+      }
+
+      function setSelectedFile(file) {
+        selectedFile = file || null;
+        if (!selectedFile) {
+          clearDropzoneAlert();
+          fileChip.classList.remove("is-visible");
+          fileChipName.textContent = "—";
+          fileChipSize.textContent = "";
+          fileInput.value = "";
+          return;
+        }
+        if (!fileExtensionOk(selectedFile.name)) {
+          showDropzoneAlert(
+            "Неподдерживаемый формат. Загрузите файл с расширением .pptx, .ppt, .pps, .pot, .odp или совместимым."
+          );
+          try {
+            fileInput.value = "";
+          } catch {}
+          return;
+        }
+        clearDropzoneAlert();
+        fileChip.classList.add("is-visible");
+        fileChipName.textContent = selectedFile.name || "presentation";
+        fileChipSize.textContent = fmtBytes(selectedFile.size);
+      }
+
+      function pickFile() {
+        fileInput.click();
+      }
+
+      dropzonePickBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        pickFile();
+      });
+      dropzone.addEventListener("click", (e) => {
+        // Avoid double-trigger when clicking the button inside.
+        if (e.target && e.target.id === "dropzonePickBtn") return;
+        pickFile();
+      });
+      dropzone.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          pickFile();
+        }
+      });
+      fileInput.addEventListener("change", () => {
+        const f = fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;
+        setSelectedFile(f);
+      });
+      fileChipClear.addEventListener("click", (e) => {
+        e.preventDefault();
+        setSelectedFile(null);
+      });
+
+      function isFilesDrag(e) {
+        const dt = e && e.dataTransfer;
+        if (!dt) return false;
+        if (dt.types && Array.from(dt.types).includes("Files")) return true;
+        return Boolean(dt.files && dt.files.length);
+      }
+      let dragDepth = 0;
+      let draggingFiles = false;
+      function showDragOverlay() {
+        if (!dragOverlay) return;
+        dragOverlay.classList.add("is-on");
+        dragOverlay.setAttribute("aria-hidden", "false");
+      }
+      function hideDragOverlay() {
+        if (!dragOverlay) return;
+        dragOverlay.classList.remove("is-on");
+        dragOverlay.setAttribute("aria-hidden", "true");
+      }
+      function resetDragOverlay() {
+        dragDepth = 0;
+        draggingFiles = false;
+        hideDragOverlay();
+      }
+
+      // Full-page overlay when dragging files anywhere on page (robust, no flicker/stuck)
+      // Use capture so inner drop handlers can't block us.
+      document.addEventListener(
+        "dragenter",
+        (e) => {
+          if (!isFilesDrag(e)) return;
+          draggingFiles = true;
+          dragDepth += 1;
+          showDragOverlay();
+        },
+        true
+      );
+      document.addEventListener(
+        "dragover",
+        (e) => {
+          if (!draggingFiles && !isFilesDrag(e)) return;
+          e.preventDefault();
+          showDragOverlay();
+        },
+        true
+      );
+      document.addEventListener(
+        "dragleave",
+        (e) => {
+          if (!draggingFiles) return;
+          // Some browsers don't keep Files in dragleave, so rely on our own state.
+          dragDepth = Math.max(0, dragDepth - 1);
+          if (dragDepth === 0) resetDragOverlay();
+        },
+        true
+      );
+      document.addEventListener(
+        "drop",
+        (e) => {
+          if (!draggingFiles && !isFilesDrag(e)) return;
+          e.preventDefault();
+          resetDragOverlay();
+        },
+        true
+      );
+      window.addEventListener("dragend", () => resetDragOverlay(), true);
+
+      ;["dragenter", "dragover"].forEach((evt) => {
+        dropzone.addEventListener(evt, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          dropzone.classList.add("is-dragover");
+        });
+      });
+      ;["dragleave", "dragend", "drop"].forEach((evt) => {
+        dropzone.addEventListener(evt, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          dropzone.classList.remove("is-dragover");
+        });
+      });
+      dropzone.addEventListener("drop", (e) => {
+        const dt = e.dataTransfer;
+        const f = dt && dt.files && dt.files[0] ? dt.files[0] : null;
+        resetDragOverlay();
+        if (f) {
+          // Keep input in sync when possible
+          try {
+            fileInput.files = dt.files;
+          } catch {
+            // Some browsers disallow programmatic assignment; we will submit via FormData anyway.
+          }
+          setSelectedFile(f);
+        }
+      });
+
+      if (dragOverlay) {
+        ;["dragenter", "dragover"].forEach((evt) => {
+          dragOverlay.addEventListener(evt, (e) => {
+            if (!isFilesDrag(e)) return;
+            e.preventDefault();
+            e.stopPropagation();
+            showDragOverlay();
+          });
+        });
+        dragOverlay.addEventListener("drop", (e) => {
+          if (!isFilesDrag(e)) return;
+          e.preventDefault();
+          e.stopPropagation();
+          const dt = e.dataTransfer;
+          const f = dt && dt.files && dt.files[0] ? dt.files[0] : null;
+          resetDragOverlay();
+          if (f) {
+            try {
+              fileInput.files = dt.files;
+            } catch {}
+            setSelectedFile(f);
+          }
+        });
+      }
+
+      function getToken() {
+        return localStorage.getItem(TOKEN_KEY);
+      }
+      function setToken(t) {
+        if (t) localStorage.setItem(TOKEN_KEY, t);
+        else localStorage.removeItem(TOKEN_KEY);
+      }
+      function authHeaders() {
+        const t = getToken();
+        const h = {};
+        if (t) h["Authorization"] = "Bearer " + t;
+        return h;
+      }
+
+      function formatTime(iso) {
+        try {
+          const d = new Date(iso);
+          return d.toLocaleString("ru-RU", { dateStyle: "short", timeStyle: "short" });
+        } catch {
+          return iso;
+        }
+      }
+
+      async function refreshMe() {
+        const t = getToken();
+        if (!t) {
+          btnAuth.hidden = false;
+          btnCabinet.hidden = true;
+          btnCabinet.textContent = "";
+          btnLogout.hidden = true;
+          return;
+        }
+        try {
+          const r = await fetch("/api/me", { headers: authHeaders() });
+          if (!r.ok) throw new Error();
+          const u = await r.json();
+          const firstName = (u && u.first_name ? String(u.first_name) : "").trim();
+          btnAuth.hidden = true;
+          btnCabinet.hidden = false;
+          btnLogout.hidden = false;
+          btnCabinet.textContent = firstName ? ("Здравствуйте, " + firstName + "!") : (u.username || "");
+          cabinetUserLine.innerHTML = firstName
+            ? ('Здравствуйте, <strong>' + escapeHtml(firstName) + "</strong>!")
+            : ('Вы вошли как <strong>' + escapeHtml(u.username || "") + "</strong>");
+        } catch {
+          setToken(null);
+          await refreshMe();
+        }
+      }
+
+      function escapeHtml(s) {
+        const d = document.createElement("div");
+        d.textContent = s;
+        return d.innerHTML;
+      }
+
+      function setStatus(kind, text) {
+        // kind: "idle" | "processing" | "success" | "error"
+        if (!text) {
+          status.textContent = "";
+          return;
+        }
+        const safeText = String(text);
+        let anim = "";
+        if (kind === "processing") {
+          anim = '<div class="anim"><div class="spinner" aria-hidden="true"></div></div>';
+        } else if (kind === "success") {
+          anim =
+            '<div class="anim check" aria-hidden="true">' +
+            '<svg viewBox="0 0 24 24" fill="none"><path d="M20 7L10 17l-5-5" stroke="rgba(139, 92, 246, 0.95)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+            "</div>";
+        } else if (kind === "error") {
+          anim =
+            '<div class="anim cross" aria-hidden="true">' +
+            '<svg viewBox="0 0 24 24" fill="none">' +
+            '<path d="M7 7l10 10" stroke="rgba(252, 165, 165, 0.95)" stroke-width="2.6" stroke-linecap="round"/>' +
+            '<path d="M17 7L7 17" stroke="rgba(252, 165, 165, 0.95)" stroke-width="2.6" stroke-linecap="round"/>' +
+            "</svg></div>";
+        }
+        status.innerHTML =
+          '<div class="status-row">' +
+          anim +
+          '<div class="status-text"></div>' +
+          "</div>";
+        status.querySelector(".status-text").textContent = safeText;
+      }
+
+      function setStep(active) {
+        // active: 0 none, 1 extract, 2 translate, 3 build
+        stepper.classList.toggle("is-visible", active > 0);
+        stepExtract.classList.toggle("is-active", active === 1);
+        stepTranslate.classList.toggle("is-active", active === 2);
+        stepBuild.classList.toggle("is-active", active === 3);
+      }
+
+      function toast(kind, title, msg, opts = {}) {
+        const t = document.createElement("div");
+        t.className = "toast toast-" + kind;
+        const icon = document.createElement("div");
+        icon.className = "toast-icon";
+        icon.innerHTML =
+          kind === "success"
+            ? '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 7L10 17l-5-5" stroke="rgba(139, 92, 246, 0.95)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+            : '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 7l10 10" stroke="rgba(252, 165, 165, 0.95)" stroke-width="2.6" stroke-linecap="round"/><path d="M17 7L7 17" stroke="rgba(252, 165, 165, 0.95)" stroke-width="2.6" stroke-linecap="round"/></svg>';
+        const body = document.createElement("div");
+        body.innerHTML = '<div class="toast-title"></div><p class="toast-msg"></p>';
+        body.querySelector(".toast-title").textContent = title;
+        body.querySelector(".toast-msg").textContent = msg;
+        const close = document.createElement("button");
+        close.className = "toast-close";
+        close.type = "button";
+        close.setAttribute("aria-label", "Закрыть");
+        close.textContent = "×";
+        close.addEventListener("click", () => {
+          t.classList.remove("is-in");
+          setTimeout(() => t.remove(), 220);
+        });
+
+        t.appendChild(icon);
+        t.appendChild(body);
+        t.appendChild(close);
+        toasts.appendChild(t);
+        requestAnimationFrame(() => t.classList.add("is-in"));
+
+        const duration = opts.duration_ms ?? (kind === "success" ? 3500 : 0);
+        if (duration > 0) {
+          setTimeout(() => {
+            if (!t.isConnected) return;
+            t.classList.remove("is-in");
+            setTimeout(() => t.remove(), 220);
+          }, duration);
+        }
+      }
+
+      async function openCabinet() {
+        const t = getToken();
+        if (!t) {
+          openAuth(null);
+          return;
+        }
+        try {
+          const r = await fetch("/api/history", { headers: authHeaders() });
+          if (!r.ok) throw new Error();
+          const data = await r.json();
+          const items = data.items || [];
+          cabinetHistoryList.innerHTML = "";
+          items.forEach((row) => {
+            const li = document.createElement("li");
+            li.textContent =
+              (row.original_filename || "") + " → " + (row.target_lang || "") + " · " + formatTime(row.created_at);
+            cabinetHistoryList.appendChild(li);
+          });
+          if (items.length === 0) {
+            const li = document.createElement("li");
+            li.textContent = "Пока нет записей.";
+            cabinetHistoryList.appendChild(li);
+          }
+        } catch {
+          cabinetHistoryList.innerHTML = "<li>Не удалось загрузить историю.</li>";
+        }
+        cabinetModal.classList.add("is-open");
+        const cabPanel = cabinetModal.querySelector(".modal");
+        trapFocus(cabPanel || cabinetModal, btnCabinet);
+      }
+
+      function openAuth(returnEl) {
+        authError.textContent = "";
+        authModal.classList.add("is-open");
+        const authPanel = authModal.querySelector(".modal");
+        trapFocus(authPanel || authModal, returnEl != null ? returnEl : btnAuth);
+      }
+      function closeAuth() {
+        authModal.classList.remove("is-open");
+        releaseFocus();
+      }
+      function closeCabinet() {
+        cabinetModal.classList.remove("is-open");
+        releaseFocus();
+      }
+
+      function openFaq(returnEl) {
+        faqModal.classList.add("is-open");
+        const faqPanel = faqModal.querySelector(".modal");
+        trapFocus(faqPanel || faqModal, returnEl != null ? returnEl : btnFaq);
+      }
+      function closeFaq() {
+        faqModal.classList.remove("is-open");
+        releaseFocus();
+      }
+
+      function openLogoutConfirm(returnEl) {
+        logoutModal.classList.add("is-open");
+        const loPanel = logoutModal.querySelector(".modal");
+        trapFocus(loPanel || logoutModal, returnEl != null ? returnEl : btnLogout);
+      }
+      function closeLogoutConfirm() {
+        logoutModal.classList.remove("is-open");
+        releaseFocus();
+      }
+
+      tabLogin.addEventListener("click", () => {
+        authMode = "login";
+        tabLogin.classList.add("is-active");
+        tabRegister.classList.remove("is-active");
+        authModalTitle.textContent = "Вход";
+        authSubmit.textContent = "Войти";
+        authError.textContent = "";
+        if (authNameFields) authNameFields.style.display = "none";
+        if (authFirst) authFirst.value = "";
+        if (authLast) authLast.value = "";
+      });
+      tabRegister.addEventListener("click", () => {
+        authMode = "register";
+        tabRegister.classList.add("is-active");
+        tabLogin.classList.remove("is-active");
+        authModalTitle.textContent = "Регистрация";
+        authSubmit.textContent = "Зарегистрироваться";
+        authError.textContent = "";
+        if (authNameFields) authNameFields.style.display = "block";
+      });
+
+      btnAuth.addEventListener("click", () => {
+        authMode = "login";
+        tabLogin.click();
+        openAuth(btnAuth);
+      });
+      btnCabinet.addEventListener("click", () => {
+        location.href = "/account";
+      });
+      btnFaq.addEventListener("click", () => openFaq(btnFaq));
+      btnLogout.addEventListener("click", () => {
+        openLogoutConfirm(btnLogout);
+      });
+      cabinetLogout.addEventListener("click", () => {
+        openLogoutConfirm(cabinetLogout);
+      });
+      authModalClose.addEventListener("click", closeAuth);
+      cabinetModalClose.addEventListener("click", closeCabinet);
+      faqModalClose.addEventListener("click", closeFaq);
+      logoutModalClose.addEventListener("click", closeLogoutConfirm);
+      logoutCancel.addEventListener("click", closeLogoutConfirm);
+      logoutModal.addEventListener("click", (e) => {
+        if (e.target === logoutModal) closeLogoutConfirm();
+      });
+      logoutConfirm.addEventListener("click", () => {
+        setToken(null);
+        closeLogoutConfirm();
+        closeCabinet();
+        refreshMe();
+      });
+      authModal.addEventListener("click", (e) => {
+        if (e.target === authModal) closeAuth();
+      });
+      cabinetModal.addEventListener("click", (e) => {
+        if (e.target === cabinetModal) closeCabinet();
+      });
+      faqModal.addEventListener("click", (e) => {
+        if (e.target === faqModal) closeFaq();
+      });
+
+      function closeAllLangPickers() {
+        document.querySelectorAll(".lang-picker-panel").forEach((panel) => {
+          if (panel.hidden) return;
+          panel.hidden = true;
+          const inner = panel.closest(".lang-picker-inner");
+          const btn = inner && inner.querySelector(".lang-picker-btn");
+          if (btn) btn.setAttribute("aria-expanded", "false");
+          const list = panel.querySelector(".lang-picker-list");
+          if (list) list.innerHTML = "";
+          const q = panel.querySelector(".lang-picker-search");
+          if (q) q.value = "";
+        });
+      }
+
+      document.addEventListener(
+        "pointerdown",
+        (e) => {
+          document.querySelectorAll(".lang-picker-inner").forEach((inner) => {
+            const panel = inner.querySelector(".lang-picker-panel");
+            if (!panel || panel.hidden) return;
+            if (inner.contains(e.target)) return;
+            panel.hidden = true;
+            const btn = inner.querySelector(".lang-picker-btn");
+            if (btn) btn.setAttribute("aria-expanded", "false");
+            const list = inner.querySelector(".lang-picker-list");
+            if (list) list.innerHTML = "";
+            const q = inner.querySelector(".lang-picker-search");
+            if (q) q.value = "";
+          });
+        },
+        true
+      );
+
+      // Focus trap + возврат фокуса на триггер
+      let lastActiveEl = null;
+      let activeTrapRoot = null;
+      function getFocusable(root) {
+        return Array.from(
+          root.querySelectorAll(
+            'a[href], button:not([disabled]), textarea, input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex=\"-1\"])'
+          )
+        ).filter(
+          (el) =>
+            el.offsetParent !== null &&
+            !el.classList.contains("combo-native-select") &&
+            el.getAttribute("aria-hidden") !== "true"
+        );
+      }
+      function trapFocus(root, returnEl) {
+        lastActiveEl = returnEl != null ? returnEl : document.activeElement;
+        activeTrapRoot = root;
+        const focusables = getFocusable(root);
+        if (focusables.length) focusables[0].focus();
+      }
+      function releaseFocus() {
+        activeTrapRoot = null;
+        if (lastActiveEl && typeof lastActiveEl.focus === "function") {
+          try { lastActiveEl.focus(); } catch {}
+        }
+        lastActiveEl = null;
+      }
+      document.addEventListener("keydown", (e) => {
+        if (!activeTrapRoot) return;
+        if (e.key !== "Tab") return;
+        const f = getFocusable(activeTrapRoot);
+        if (!f.length) return;
+        const first = f[0];
+        const last = f[f.length - 1];
+        if (e.shiftKey) {
+          if (document.activeElement === first || document.activeElement === activeTrapRoot) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      });
+
+      document.addEventListener("keydown", (e) => {
+        if (e.key !== "Escape") return;
+        const langPanelOpen = Array.from(document.querySelectorAll(".lang-picker-panel")).some((p) => !p.hidden);
+        if (langPanelOpen) {
+          closeAllLangPickers();
+          e.preventDefault();
+          return;
+        }
+        if (logoutModal.classList.contains("is-open")) {
+          closeLogoutConfirm();
+          return;
+        }
+        if (faqModal.classList.contains("is-open")) {
+          closeFaq();
+          return;
+        }
+        if (authModal.classList.contains("is-open")) {
+          closeAuth();
+          return;
+        }
+        if (cabinetModal.classList.contains("is-open")) {
+          closeCabinet();
+          return;
+        }
+      });
+
+      authForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        authError.textContent = "";
+        const username = document.getElementById("authUser").value.trim();
+        const password = document.getElementById("authPass").value;
+        const first_name = authMode === "register" ? (authFirst ? authFirst.value.trim() : "") : "";
+        const last_name = authMode === "register" ? (authLast ? authLast.value.trim() : "") : "";
+        const url = authMode === "register" ? "/api/auth/register" : "/api/auth/login";
+        try {
+          const r = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            body: JSON.stringify({ username, password, first_name, last_name }),
+          });
+          const raw = await r.text();
+          let data;
+          try {
+            data = JSON.parse(raw);
+          } catch {
+            throw new Error(raw || "Ошибка сервера");
+          }
+          if (!r.ok) {
+            let msg = "Ошибка";
+            const d = data.detail;
+            if (typeof d === "string") msg = d;
+            else if (Array.isArray(d)) msg = d.map((x) => x.msg || JSON.stringify(x)).join(", ");
+            else if (d) msg = JSON.stringify(d);
+            throw new Error(msg);
+          }
+          setToken(data.access_token);
+          closeAuth();
+          document.getElementById("authPass").value = "";
+          await refreshMe();
+        } catch (err) {
+          authError.textContent = err && err.message ? err.message : String(err);
+        }
+      });
+
+      f.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        setStatus("idle", "");
+        setStep(0);
+        btn.disabled = true;
+        btn.setAttribute("aria-busy", "true");
+        btn.textContent = "Перевожу…";
+        try {
+          if (!selectedFile) {
+            throw new Error("Сначала выбери файл презентации.");
+          }
+          setStep(1);
+          const fake1 = setTimeout(() => setStep(2), 650);
+          const fake2 = setTimeout(() => setStep(3), 1600);
+          setStatus("processing", "Перевожу… Это может занять немного времени.");
+          const tgtCode = (targetSel && targetSel.value ? String(targetSel.value) : "").trim().toLowerCase();
+          if (!tgtCode) {
+            throw new Error("Выберите целевой язык в списке.");
+          }
+          const srcCode = (sourceSel && sourceSel.value ? String(sourceSel.value) : "").trim().toLowerCase();
+          if (!srcCode) {
+            throw new Error("Выберите исходный язык в списке.");
+          }
+          const fd = new FormData(f);
+          // Ensure correct file is sent even for drag&drop.
+          fd.set("file", selectedFile, selectedFile.name || "presentation.pptx");
+          fd.set("target_lang", tgtCode);
+          fd.set("source_lang", srcCode);
+          const r = await fetch("/api/translate/pptx", {
+            method: "POST",
+            body: fd,
+            headers: authHeaders(),
+          });
+          if (!r.ok) {
+            const raw = await r.text();
+            let msg = "";
+            try {
+              const data = JSON.parse(raw);
+              msg = data && data.detail ? String(data.detail) : JSON.stringify(data);
+            } catch {
+              msg = raw;
+            }
+            throw new Error((msg || "").trim() || `HTTP ${r.status}`);
+          }
+          const blob = await r.blob();
+          const cd = r.headers.get("Content-Disposition") || "";
+          const match = /filename="([^"]+)"/.exec(cd);
+          const filename = match ? match[1] : "translated.pptx";
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+          setStatus("success", "Готово. Файл скачан.");
+          toast("success", "Готово", "Перевод завершён. Файл скачан.");
+          setStep(0);
+          clearTimeout(fake1);
+          clearTimeout(fake2);
+        } catch (err) {
+          const msg = err && err.message ? err.message : String(err);
+          setStatus("error", "Ошибка: " + msg);
+          toast("error", "Ошибка", msg, { duration_ms: 0 });
+          setStep(0);
+        } finally {
+          btn.disabled = false;
+          btn.removeAttribute("aria-busy");
+          btn.textContent = "Перевести и скачать";
+        }
+      });
+
+      /* ISO 639-1 (и варианты) → ISO 3166-1 alpha-2 для флагов на worldometers.info */
+      const LANG_TO_REGION = {
+        en: "gb",
+        ar: "sa",
+        af: "za",
+        am: "et",
+        az: "az",
+        be: "by",
+        bg: "bg",
+        bn: "bd",
+        bs: "ba",
+        ca: "es",
+        cs: "cz",
+        cy: "gb",
+        da: "dk",
+        de: "de",
+        el: "gr",
+        es: "es",
+        et: "ee",
+        eu: "es",
+        fa: "ir",
+        fi: "fi",
+        fr: "fr",
+        ga: "ie",
+        gl: "es",
+        gu: "in",
+        he: "il",
+        hi: "in",
+        hr: "hr",
+        hu: "hu",
+        id: "id",
+        is: "is",
+        it: "it",
+        ja: "jp",
+        jv: "id",
+        ka: "ge",
+        kn: "in",
+        ko: "kr",
+        lt: "lt",
+        lv: "lv",
+        mk: "mk",
+        ml: "in",
+        mn: "mn",
+        mr: "in",
+        ms: "my",
+        my: "mm",
+        mt: "mt",
+        ne: "np",
+        nl: "nl",
+        no: "no",
+        nb: "no",
+        nn: "no",
+        pa: "in",
+        pl: "pl",
+        pt: "pt",
+        ro: "ro",
+        ru: "ru",
+        sk: "sk",
+        sl: "si",
+        sq: "al",
+        sr: "rs",
+        sv: "se",
+        sw: "ke",
+        ta: "in",
+        te: "in",
+        th: "th",
+        tl: "ph",
+        tr: "tr",
+        uk: "ua",
+        ur: "pk",
+        uz: "uz",
+        vi: "vn",
+        zh: "cn",
+      };
+
+      const WORLDOMETER_FLAG_BASE = "https://www.worldometers.info/images/flags/w40/";
+
+      function regionLowerForLang(code) {
+        const raw = String(code || "").trim().toLowerCase();
+        if (!raw) return null;
+        if (raw.startsWith("zh-tw") || raw === "zt") return "tw";
+        if (raw.startsWith("zh-hk")) return "hk";
+        if (raw.startsWith("zh-cn") || raw === "zh") return "cn";
+        const base = raw.split(/[-_]/)[0];
+        const m = LANG_TO_REGION[base];
+        return m ? String(m).toLowerCase() : null;
+      }
+
+      function flagEmojiForLangCode(code) {
+        const raw = String(code || "").trim().toLowerCase();
+        if (!raw) return "🌐";
+        const cc = regionLowerForLang(code);
+        if (!cc || cc.length !== 2) return "🌐";
+        const A = 0x1f1e6;
+        const a = cc.toUpperCase().charCodeAt(0);
+        const b = cc.toUpperCase().charCodeAt(1);
+        if (a < 65 || a > 90 || b < 65 || b > 90) return "🌐";
+        return String.fromCodePoint(A + (a - 65), A + (b - 65));
+      }
+
+      function renderFlagInto(el, code) {
+        if (!el) return;
+        while (el.firstChild) el.removeChild(el.firstChild);
+        const rawVal = String(code || "").trim();
+        if (!rawVal) {
+          el.textContent = "🌐";
+          return;
+        }
+        const cc = regionLowerForLang(rawVal);
+        if (!cc || !/^[a-z]{2}$/.test(cc)) {
+          el.textContent = flagEmojiForLangCode(rawVal);
+          return;
+        }
+        const img = document.createElement("img");
+        img.className = "lang-picker-flag-img";
+        img.alt = "";
+        img.width = 32;
+        img.height = 22;
+        img.loading = "lazy";
+        img.decoding = "async";
+        img.referrerPolicy = "no-referrer";
+        img.src = WORLDOMETER_FLAG_BASE + cc + ".webp";
+        const mount = el;
+        const fallbackCode = rawVal;
+        img.onerror = function () {
+          while (mount.firstChild) mount.removeChild(mount.firstChild);
+          mount.textContent = flagEmojiForLangCode(fallbackCode);
+        };
+        el.appendChild(img);
+      }
+
+      function installLangPicker(selectEl, btnEl, panelEl, listEl, searchEl) {
+        if (!selectEl || !btnEl || !panelEl || !listEl) return;
+
+        const txtEl = btnEl.querySelector(".lang-picker-btn-text");
+        const flagEl = btnEl.querySelector(".lang-picker-btn-flag");
+
+        function syncButtonFromSelect() {
+          const o = selectEl.options[selectEl.selectedIndex];
+          const label = o ? o.textContent.trim() : "—";
+          if (txtEl) txtEl.textContent = label || "—";
+          renderFlagInto(flagEl, o && o.value !== "" ? o.value : "");
+        }
+
+        function closePanel() {
+          panelEl.hidden = true;
+          btnEl.setAttribute("aria-expanded", "false");
+          listEl.innerHTML = "";
+          if (searchEl) searchEl.value = "";
+        }
+
+        function filterQuery() {
+          return (searchEl && searchEl.value ? searchEl.value : "").trim().toLowerCase();
+        }
+
+        function renderList() {
+          const q = filterQuery();
+          listEl.innerHTML = "";
+          for (let i = 0; i < selectEl.options.length; i++) {
+            const o = selectEl.options[i];
+            if (!(o.value || "").trim()) continue;
+            const lab = (o.textContent || "").toLowerCase();
+            const val = (o.value || "").toLowerCase();
+            if (q && !lab.includes(q) && !val.includes(q)) continue;
+            const li = document.createElement("li");
+            li.setAttribute("role", "option");
+            li.className = "lang-picker-option";
+            li.id = selectEl.id + "-opt-" + i;
+            if (i === selectEl.selectedIndex) li.setAttribute("aria-selected", "true");
+            const row = document.createElement("div");
+            row.className = "lang-picker-row";
+            const name = document.createElement("span");
+            name.className = "lang-picker-name";
+            name.textContent = o.textContent;
+            const fl = document.createElement("span");
+            fl.className = "lang-picker-option-flag";
+            fl.setAttribute("aria-hidden", "true");
+            renderFlagInto(fl, o.value === "" ? "" : o.value);
+            row.appendChild(name);
+            row.appendChild(fl);
+            li.appendChild(row);
+            li.addEventListener("pointerdown", (e) => {
+              e.preventDefault();
+              selectEl.selectedIndex = i;
+              selectEl.dispatchEvent(new Event("change", { bubbles: true }));
+              syncButtonFromSelect();
+              closePanel();
+              btnEl.focus();
+            });
+            listEl.appendChild(li);
+          }
+        }
+
+        function openPanel() {
+          closeAllLangPickers();
+          panelEl.hidden = false;
+          btnEl.setAttribute("aria-expanded", "true");
+          if (searchEl) {
+            searchEl.value = "";
+            try {
+              searchEl.focus();
+            } catch {}
+          }
+          renderList();
+        }
+
+        btnEl.addEventListener("click", (e) => {
+          e.preventDefault();
+          if (btnEl.disabled) return;
+          if (!panelEl.hidden) closePanel();
+          else openPanel();
+        });
+
+        if (searchEl) {
+          searchEl.addEventListener("input", () => renderList());
+          searchEl.addEventListener("keydown", (e) => {
+            if (e.key === "Escape") {
+              e.stopPropagation();
+              closePanel();
+              btnEl.focus();
+            }
+          });
+        }
+
+        selectEl.addEventListener("change", syncButtonFromSelect);
+        selectEl._pickerSync = () => {
+          syncButtonFromSelect();
+          closePanel();
+        };
+        syncButtonFromSelect();
+      }
+
+      installLangPicker(sourceSel, sourceLangBtn, sourceLangPanel, sourceListbox, sourceLangSearch);
+      installLangPicker(targetSel, targetLangBtn, targetLangPanel, targetListbox, targetLangSearch);
+
+      async function loadTranslationLanguages() {
+        const selSrc = document.getElementById("source");
+        const selTgt = document.getElementById("target");
+        if (!selSrc || !selTgt) return;
+
+        function fillLangSelect(sel, entries) {
+          sel.innerHTML = "";
+          const ph = document.createElement("option");
+          ph.value = "";
+          ph.textContent = "Выберите язык";
+          sel.appendChild(ph);
+          entries.forEach((L) => {
+            const code = String(L.code || "").trim().toLowerCase();
+            if (!code) return;
+            const o = document.createElement("option");
+            o.value = code;
+            o.textContent = String(L.name || code);
+            sel.appendChild(o);
+          });
+          sel.value = "";
+        }
+
+        function setLangLoadingUi(loading) {
+          if (langLoadStatus && loading) langLoadStatus.textContent = "Загружаем список языков…";
+          [selSrc, selTgt].forEach((s) => {
+            if (s) {
+              s.setAttribute("aria-busy", loading ? "true" : "false");
+              if (loading) {
+                s.removeAttribute("aria-invalid");
+                s.removeAttribute("aria-describedby");
+              }
+            }
+          });
+          [sourceComboWrap, targetComboWrap].forEach((w) => {
+            if (w) w.setAttribute("aria-busy", loading ? "true" : "false");
+          });
+          [sourceLangBtn, targetLangBtn].forEach((b) => {
+            if (b) b.disabled = loading;
+          });
+        }
+
+        function setLangFallbackUi(isFallback) {
+          [selSrc, selTgt].forEach((s) => {
+            if (!s) return;
+            if (isFallback) {
+              s.setAttribute("aria-invalid", "true");
+              s.setAttribute("aria-describedby", "langLoadStatus");
+            } else {
+              s.removeAttribute("aria-invalid");
+              s.removeAttribute("aria-describedby");
+            }
+          });
+          if (langLoadStatus && isFallback) {
+            langLoadStatus.textContent =
+              "Не удалось загрузить полный список — показан упрощённый набор языков.";
+          }
+        }
+
+        function syncPickers() {
+          [selSrc, selTgt].forEach((s) => {
+            if (s && s._pickerSync) s._pickerSync();
+          });
+        }
+
+        function fallback() {
+          const minimal = [
+            { code: "en", name: "English" },
+            { code: "ru", name: "Russian" },
+            { code: "de", name: "German" },
+            { code: "fr", name: "French" },
+            { code: "es", name: "Spanish" },
+          ];
+          fillLangSelect(selSrc, minimal);
+          fillLangSelect(selTgt, minimal);
+          setLangFallbackUi(true);
+        }
+
+        setLangLoadingUi(true);
+
+        try {
+          const r = await fetch("/api/translate/languages");
+          if (!r.ok) throw new Error("bad status");
+          const data = await r.json();
+          const list = Array.isArray(data.languages) ? data.languages.slice() : [];
+          if (list.length === 0) throw new Error("empty");
+          list.sort((a, b) =>
+            String(a.name || a.code).localeCompare(String(b.name || b.code), "ru", { sensitivity: "base" })
+          );
+          fillLangSelect(selSrc, list);
+          fillLangSelect(selTgt, list);
+          setLangFallbackUi(false);
+          if (langLoadStatus) langLoadStatus.textContent = "";
+        } catch {
+          fallback();
+        } finally {
+          setLangLoadingUi(false);
+          syncPickers();
+        }
+      }
+
+      loadTranslationLanguages();
+      refreshMe();
+    </script>
+  </body>
+</html>

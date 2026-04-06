@@ -1,0 +1,948 @@
+<!doctype html>
+<html lang="ru" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem("translide-theme");
+          if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+          else document.documentElement.setAttribute("data-theme", "dark");
+        } catch (e) {
+          document.documentElement.setAttribute("data-theme", "dark");
+        }
+      })();
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="description" content="Личный кабинет translide: история переводов презентаций, выгрузка CSV и выход из аккаунта." />
+    <title>translide · Кабинет</title>
+    <link rel="icon" href="/static/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" href="/static/favicon-32.png" sizes="32x32" />
+    <link rel="apple-touch-icon" href="/static/favicon-180.png" sizes="180x180" />
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #07060b;
+        --bg-deep: #05040a;
+        --bg-glow: rgba(139, 92, 246, 0.28);
+        --text: rgba(255, 255, 255, 0.92);
+        --muted: rgba(255, 255, 255, 0.55);
+        --muted2: rgba(255, 255, 255, 0.42);
+        --accent: #8b5cf6;
+        --accent-dim: rgba(139, 92, 246, 0.35);
+        --card: rgba(255, 255, 255, 0.04);
+        --stroke: rgba(255, 255, 255, 0.1);
+        --input-bg: rgba(0, 0, 0, 0.35);
+        --panel-a: rgba(20, 18, 32, 0.98);
+        --panel-b: rgba(10, 9, 18, 0.99);
+        --panel-a-soft: rgba(20, 18, 32, 0.78);
+        --panel-b-soft: rgba(10, 9, 18, 0.86);
+        --shadow-elevated: rgba(0, 0, 0, 0.45);
+        --shadow-elevated-lg: rgba(0, 0, 0, 0.55);
+        --radius-card: 20px;
+        --radius-input: 8px;
+        /* Modern “spring-ish” UI motion */
+        --ease-spring: cubic-bezier(0.2, 0.9, 0.2, 1);
+        --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+        --t-press: 120ms;
+        --t-ui: 260ms;
+      }
+      * { box-sizing: border-box; }
+      html, body, button, input, select, textarea { font-family: inherit; }
+      a, button, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
+        color: var(--text);
+        background-color: var(--bg);
+        background-image:
+          radial-gradient(ellipse 900px 700px at 100% -10%, var(--bg-glow), transparent 55%),
+          linear-gradient(180deg, var(--bg), var(--bg-deep));
+      }
+
+      * {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(139, 92, 246, 0.55) rgba(255, 255, 255, 0.06);
+      }
+      *::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+      }
+      *::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 999px;
+      }
+      *::-webkit-scrollbar-thumb {
+        background: linear-gradient(180deg, rgba(186, 170, 255, 0.55), rgba(139, 92, 246, 0.42));
+        border-radius: 999px;
+        border: 2px solid rgba(7, 6, 11, 0.55);
+        background-clip: padding-box;
+      }
+      *::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(180deg, rgba(210, 200, 255, 0.7), rgba(139, 92, 246, 0.58));
+        border-color: rgba(7, 6, 11, 0.45);
+      }
+      *::-webkit-scrollbar-corner {
+        background: transparent;
+      }
+      *::-webkit-scrollbar-button {
+        display: none;
+        width: 0;
+        height: 0;
+      }
+
+      .theme-toggle {
+        position: fixed;
+        top: calc(16px + env(safe-area-inset-top, 0px));
+        right: calc(16px + env(safe-area-inset-right, 0px));
+        z-index: 3000;
+        width: 44px;
+        height: 44px;
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: linear-gradient(180deg, var(--panel-a-soft), var(--panel-b-soft));
+        color: rgba(255, 255, 255, 0.92);
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+        transition: transform var(--t-ui) var(--ease-spring), border-color var(--t-ui) var(--ease-standard), filter var(--t-ui) var(--ease-standard);
+      }
+      .theme-toggle:hover {
+        transform: translate3d(0, -2px, 0);
+        filter: brightness(1.06);
+      }
+      .theme-toggle:active { transform: translate3d(0, 0, 0); transition-duration: var(--t-press); }
+      .theme-toggle svg { width: 22px; height: 22px; }
+      .theme-toggle .icon-moon { display: none; }
+      .theme-toggle .icon-sun { display: block; }
+      html[data-theme="light"] .theme-toggle .icon-sun { display: none; }
+      html[data-theme="light"] .theme-toggle .icon-moon { display: block; }
+
+      .wrap {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 28px 20px 48px;
+        padding-left: max(20px, env(safe-area-inset-left, 0px));
+        padding-right: max(20px, env(safe-area-inset-right, 0px));
+        padding-bottom: max(48px, env(safe-area-inset-bottom, 0px) + 24px);
+      }
+      @media (max-width: 520px) {
+        .wrap {
+          padding-top: max(28px, env(safe-area-inset-top, 0px) + 12px);
+          padding-right: max(20px, env(safe-area-inset-right, 0px) + 52px);
+        }
+      }
+      .top {
+        display: flex; align-items: center; justify-content: space-between; gap: 16px;
+        margin-bottom: 22px; padding-bottom: 18px; border-bottom: 1px solid var(--stroke);
+        flex-wrap: wrap;
+      }
+      .brand { display: flex; align-items: center; gap: 14px; }
+      .logo-img { width: 56px; height: 56px; object-fit: contain; }
+      h1 { margin: 0; font-size: 1.5rem; font-weight: 850; letter-spacing: -0.04em; }
+      .sub { margin: 2px 0 0; color: var(--muted2); font-size: 0.8125rem; }
+
+      .btn {
+        padding: 8px 14px;
+        border-radius: var(--radius-input);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.05);
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 0.8125rem;
+        font-weight: 650;
+        cursor: pointer;
+        will-change: transform;
+        transition:
+          transform var(--t-ui) var(--ease-spring),
+          background var(--t-ui) var(--ease-standard),
+          border-color var(--t-ui) var(--ease-standard),
+          box-shadow var(--t-ui) var(--ease-standard),
+          filter var(--t-ui) var(--ease-standard);
+      }
+      @media (hover: hover) {
+        .btn:hover { background: rgba(255, 255, 255, 0.08); transform: translate3d(0, -2px, 0); }
+      }
+      .btn:active { transform: translate3d(0, 0, 0); transition-duration: var(--t-press); }
+      .btn:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.18); border-color: rgba(139, 92, 246, 0.35); }
+      .btn.primary {
+        border-color: rgba(139, 92, 246, 0.5);
+        color: #e9d5ff;
+        background: rgba(139, 92, 246, 0.12);
+      }
+      .btn.primary:hover { background: rgba(139, 92, 246, 0.2); }
+      .btn.danger {
+        border-color: rgba(252, 165, 165, 0.35);
+        background: rgba(252, 165, 165, 0.08);
+        color: rgba(255, 220, 220, 0.95);
+      }
+      .btn.danger:hover { background: rgba(252, 165, 165, 0.12); }
+
+      .grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+      @media (min-width: 980px) { .grid { grid-template-columns: 320px 1fr; } }
+      .card {
+        border: 1px solid var(--stroke);
+        border-radius: var(--radius-card);
+        background: var(--card);
+        box-shadow: 0 24px 64px var(--shadow-elevated);
+        padding: 18px;
+        will-change: transform;
+        transition: border-color var(--t-ui) var(--ease-standard), box-shadow var(--t-ui) var(--ease-standard), transform var(--t-ui) var(--ease-spring);
+      }
+      @media (hover: hover) {
+        .card:hover {
+          border-color: rgba(139, 92, 246, 0.22);
+          box-shadow: 0 28px 78px var(--shadow-elevated-lg);
+          transform: translate3d(0, -2px, 0);
+        }
+      }
+      .card h2 { margin: 0 0 10px; font-size: 1rem; letter-spacing: -0.02em; }
+      .muted { color: var(--muted); font-size: 0.875rem; line-height: 1.45; }
+      .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+      .pill { padding: 6px 10px; border-radius: 999px; border: 1px solid rgba(255,255,255,.10); background: rgba(255,255,255,.04); color: rgba(255,255,255,.75); font-size: .75rem; }
+
+      input[type="text"] {
+        width: 100%;
+        padding: 10px 12px;
+        border-radius: var(--radius-input);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: var(--input-bg);
+        color: var(--text);
+        outline: none;
+        font-size: 0.875rem;
+        will-change: transform;
+        transition:
+          transform var(--t-ui) var(--ease-spring),
+          background var(--t-ui) var(--ease-standard),
+          border-color var(--t-ui) var(--ease-standard),
+          box-shadow var(--t-ui) var(--ease-standard);
+      }
+      input:hover { border-color: rgba(139, 92, 246, 0.35); background: rgba(0, 0, 0, 0.42); }
+      input:focus { border-color: rgba(139, 92, 246, 0.65); box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15); }
+
+      .history-table-hint {
+        display: none;
+        margin: 0 0 8px;
+        font-size: 0.75rem;
+        color: var(--muted2);
+        line-height: 1.35;
+      }
+      @media (max-width: 640px) {
+        .history-table-hint { display: block; }
+      }
+      .history-table-wrap {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        margin: 0 -4px;
+        padding: 0 4px;
+      }
+      table { width: 100%; min-width: 520px; border-collapse: collapse; }
+      th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid rgba(255,255,255,.08); font-size: .875rem; }
+      th { color: rgba(255,255,255,.65); font-weight: 750; font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; }
+      td { color: rgba(255,255,255,.82); }
+      tbody tr { transition: background var(--t-ui) var(--ease-standard); }
+      @media (hover: hover) {
+        tbody tr:hover { background: rgba(255, 255, 255, 0.03); }
+      }
+      .right { text-align: right; }
+      .empty { padding: 14px 0; color: var(--muted2); font-size: .875rem; }
+      .top-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+      .btn.icon {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .btn.icon svg { width: 18px; height: 18px; opacity: 0.9; }
+
+      /* Confirm modal */
+      .modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.65);
+        backdrop-filter: blur(6px);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        padding: 20px;
+      }
+      .modal-backdrop.is-open { display: flex; }
+      .modal {
+        width: 100%;
+        max-width: 420px;
+        border-radius: var(--radius-card);
+        border: 1px solid var(--stroke);
+        background: linear-gradient(180deg, rgba(20, 18, 32, 0.98), rgba(10, 9, 18, 0.99));
+        box-shadow: 0 32px 80px rgba(0, 0, 0, 0.6);
+        padding: 18px 18px 16px;
+      }
+      .modal-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+      .modal-header h3 { margin: 0; font-size: 1.05rem; font-weight: 850; letter-spacing: -0.02em; }
+      .modal-close {
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--text);
+        width: 32px;
+        height: 32px;
+        border-radius: 10px;
+        cursor: pointer;
+        font-size: 1.1rem;
+        line-height: 1;
+        flex-shrink: 0;
+        will-change: transform;
+        transition:
+          transform var(--t-ui) var(--ease-spring),
+          background var(--t-ui) var(--ease-standard),
+          border-color var(--t-ui) var(--ease-standard),
+          box-shadow var(--t-ui) var(--ease-standard);
+      }
+      .modal-close:hover {
+        background: rgba(255, 255, 255, 0.12);
+        transform: translateY(-1px);
+        border-color: rgba(139, 92, 246, 0.28);
+        box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.10);
+      }
+      .modal-close:active { transform: translateY(0); }
+      .modal-actions { display: flex; gap: 10px; margin-top: 14px; }
+      .modal-actions .btn { flex: 1; }
+      .toast { margin-top: 12px; padding: 10px 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,.10); background: rgba(0,0,0,.25); color: rgba(255,255,255,.75); display: none; }
+      .toast.is-on { display: block; }
+
+      .features { display: grid; gap: 10px; margin-top: 12px; }
+      .feature {
+        border: 1px solid rgba(255,255,255,.10);
+        background: rgba(255,255,255,.03);
+        border-radius: 14px;
+        padding: 10px 12px;
+        will-change: transform;
+        transition:
+          transform var(--t-ui) var(--ease-spring),
+          background var(--t-ui) var(--ease-standard),
+          border-color var(--t-ui) var(--ease-standard),
+          box-shadow var(--t-ui) var(--ease-standard);
+      }
+      @media (hover: hover) {
+        .feature:hover {
+          transform: translate3d(0, -2px, 0);
+          border-color: rgba(139, 92, 246, 0.22);
+          background: rgba(255, 255, 255, 0.045);
+          box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.08);
+        }
+      }
+      .feature-title { font-weight: 800; font-size: .8125rem; color: rgba(255,255,255,.9); margin: 0 0 4px; }
+      .feature-desc { margin: 0; font-size: .75rem; color: rgba(255,255,255,.65); line-height: 1.35; }
+      .feature-meta { margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+      .tag { font-size: .6875rem; color: rgba(255,255,255,.65); border: 1px solid rgba(255,255,255,.10); background: rgba(255,255,255,.04); padding: 4px 8px; border-radius: 999px; }
+
+      .history-intro {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 12px 14px;
+        border-radius: 14px;
+        border: 1px solid rgba(139, 92, 246, 0.22);
+        background: rgba(139, 92, 246, 0.07);
+        margin-bottom: 14px;
+        font-size: 0.875rem;
+        color: var(--muted);
+        line-height: 1.45;
+      }
+      .history-intro svg {
+        flex-shrink: 0;
+        width: 22px;
+        height: 22px;
+        color: rgba(167, 139, 250, 0.95);
+        margin-top: 2px;
+      }
+      .history-intro strong { color: rgba(255, 255, 255, 0.88); font-weight: 750; }
+
+      html[data-theme="light"] {
+        color-scheme: light;
+        --bg: #e8ebf1;
+        --bg-deep: #d9dee7;
+        --bg-glow: rgba(61, 88, 118, 0.1);
+        --text: rgba(35, 48, 62, 0.92);
+        --muted: rgba(71, 85, 102, 0.76);
+        --muted2: rgba(90, 103, 118, 0.6);
+        --accent: #4a6280;
+        --accent-dim: rgba(61, 88, 118, 0.28);
+        --card: rgba(255, 255, 255, 0.82);
+        --stroke: rgba(35, 48, 62, 0.09);
+        --input-bg: #f5f6f8;
+        --panel-a: #fafbfc;
+        --panel-b: #f0f2f6;
+        --panel-a-soft: rgba(250, 251, 252, 0.95);
+        --panel-b-soft: #e8ecf2;
+        --shadow-elevated: rgba(30, 40, 52, 0.08);
+        --shadow-elevated-lg: rgba(30, 40, 52, 0.13);
+      }
+      html[data-theme="light"] body {
+        background-image:
+          radial-gradient(ellipse 900px 700px at 100% -10%, var(--bg-glow), transparent 55%),
+          linear-gradient(165deg, var(--bg) 0%, #dfe5ec 48%, var(--bg-deep) 100%);
+      }
+      html[data-theme="light"] .theme-toggle {
+        border-color: rgba(15, 23, 42, 0.12);
+        color: rgba(15, 23, 42, 0.88);
+        box-shadow: 0 10px 28px rgba(61, 88, 118, 0.08);
+      }
+      html[data-theme="light"] .top { border-bottom-color: var(--stroke); }
+      html[data-theme="light"] .btn {
+        border-color: rgba(15, 23, 42, 0.12);
+        background: rgba(255, 255, 255, 0.72);
+        color: rgba(15, 23, 42, 0.88);
+      }
+      @media (hover: hover) {
+        html[data-theme="light"] .btn:hover { background: rgba(255, 255, 255, 0.95); }
+      }
+      html[data-theme="light"] .btn.primary {
+        border-color: rgba(61, 88, 118, 0.45);
+        color: #2c3d4f;
+        background: rgba(61, 88, 118, 0.1);
+      }
+      html[data-theme="light"] .btn.primary:hover { background: rgba(61, 88, 118, 0.16); }
+      html[data-theme="light"] .btn.danger {
+        border-color: rgba(220, 38, 38, 0.35);
+        background: rgba(254, 226, 226, 0.5);
+        color: #7f1d1d;
+      }
+      html[data-theme="light"] .btn.danger:hover { background: rgba(254, 226, 226, 0.65); }
+      html[data-theme="light"] .btn:focus-visible {
+        box-shadow: 0 0 0 3px rgba(61, 88, 118, 0.2);
+        border-color: rgba(61, 88, 118, 0.45);
+      }
+      @media (hover: hover) {
+        html[data-theme="light"] .card:hover {
+          border-color: rgba(61, 88, 118, 0.28);
+          box-shadow: 0 28px 78px var(--shadow-elevated-lg);
+        }
+      }
+      html[data-theme="light"] .pill {
+        border-color: rgba(15, 23, 42, 0.1);
+        background: rgba(255, 255, 255, 0.65);
+        color: rgba(51, 65, 85, 0.85);
+      }
+      html[data-theme="light"] input[type="text"] {
+        border-color: rgba(15, 23, 42, 0.12);
+      }
+      html[data-theme="light"] input:hover {
+        border-color: rgba(61, 88, 118, 0.35);
+        background: rgba(242, 244, 248, 0.96);
+      }
+      html[data-theme="light"] input:focus {
+        border-color: rgba(61, 88, 118, 0.55);
+        box-shadow: 0 0 0 3px rgba(61, 88, 118, 0.12);
+      }
+      html[data-theme="light"] th, html[data-theme="light"] td { border-bottom-color: rgba(15, 23, 42, 0.08); }
+      html[data-theme="light"] th { color: rgba(51, 65, 85, 0.75); }
+      html[data-theme="light"] td { color: rgba(30, 41, 59, 0.88); }
+      @media (hover: hover) {
+        html[data-theme="light"] tbody tr:hover { background: rgba(61, 88, 118, 0.04); }
+      }
+      html[data-theme="light"] .modal-backdrop { background: rgba(15, 23, 42, 0.45); }
+      html[data-theme="light"] .modal {
+        background: linear-gradient(180deg, #fafbfc, #eaeef3);
+        box-shadow: 0 32px 80px rgba(15, 23, 42, 0.15);
+      }
+      html[data-theme="light"] .modal-close {
+        border-color: rgba(15, 23, 42, 0.12);
+        background: rgba(15, 23, 42, 0.06);
+        color: rgba(15, 23, 42, 0.88);
+      }
+      html[data-theme="light"] .modal-close:hover {
+        background: rgba(15, 23, 42, 0.1);
+        border-color: rgba(61, 88, 118, 0.35);
+        box-shadow: 0 0 0 3px rgba(61, 88, 118, 0.1);
+      }
+      html[data-theme="light"] .toast {
+        border-color: rgba(15, 23, 42, 0.1);
+        background: rgba(255, 255, 255, 0.92);
+        color: rgba(51, 65, 85, 0.88);
+      }
+      html[data-theme="light"] .feature {
+        border-color: rgba(15, 23, 42, 0.1);
+        background: rgba(255, 255, 255, 0.55);
+      }
+      @media (hover: hover) {
+        html[data-theme="light"] .feature:hover {
+          border-color: rgba(61, 88, 118, 0.25);
+          background: rgba(255, 255, 255, 0.85);
+          box-shadow: 0 0 0 3px rgba(61, 88, 118, 0.06);
+        }
+      }
+      html[data-theme="light"] .feature-title { color: rgba(15, 23, 42, 0.9); }
+      html[data-theme="light"] .feature-desc { color: rgba(51, 65, 85, 0.72); }
+      html[data-theme="light"] .tag {
+        color: rgba(51, 65, 85, 0.75);
+        border-color: rgba(15, 23, 42, 0.1);
+        background: rgba(230, 234, 240, 0.85);
+      }
+      html[data-theme="light"] .history-intro {
+        border-color: rgba(61, 88, 118, 0.28);
+        background: rgba(61, 88, 118, 0.08);
+      }
+      html[data-theme="light"] .history-intro svg { color: rgba(61, 88, 118, 0.9); }
+      html[data-theme="light"] .history-intro strong { color: rgba(15, 23, 42, 0.9); }
+
+      html[data-theme="light"] * {
+        scrollbar-color: rgba(61, 88, 118, 0.55) rgba(15, 23, 42, 0.07);
+      }
+      html[data-theme="light"] *::-webkit-scrollbar-track {
+        background: rgba(15, 23, 42, 0.06);
+      }
+      html[data-theme="light"] *::-webkit-scrollbar-thumb {
+        background: linear-gradient(180deg, rgba(100, 125, 155, 0.55), rgba(61, 88, 118, 0.42));
+        border: 2px solid rgba(248, 250, 252, 0.85);
+        background-clip: padding-box;
+      }
+      html[data-theme="light"] *::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(180deg, rgba(120, 145, 175, 0.65), rgba(61, 88, 118, 0.55));
+      }
+
+      @media (max-width: 600px) {
+        .top {
+          flex-direction: column;
+          align-items: stretch;
+          gap: 12px;
+          margin-bottom: 16px;
+          padding-bottom: 14px;
+        }
+        .brand {
+          min-width: 0;
+          gap: 12px;
+        }
+        h1 {
+          font-size: clamp(1.35rem, 6vw, 1.5rem);
+        }
+        .sub {
+          font-size: 0.75rem;
+        }
+        .top-actions {
+          width: 100%;
+          justify-content: stretch;
+          gap: 8px;
+        }
+        .top-actions .btn {
+          flex: 1 1 0;
+          min-width: 0;
+          justify-content: center;
+          min-height: 44px;
+          padding: 10px 12px;
+        }
+        .btn.icon {
+          font-size: 0.8125rem;
+          gap: 8px;
+        }
+        .grid {
+          gap: 12px;
+        }
+        .card {
+          padding: 14px 12px;
+        }
+        .history-intro {
+          flex-direction: column;
+          padding: 12px;
+          font-size: 0.8125rem;
+        }
+        .row {
+          flex-direction: column;
+          align-items: stretch;
+        }
+        .row .row {
+          width: 100%;
+        }
+        .row .btn {
+          flex: 1 1 auto;
+          width: 100%;
+          min-height: 44px;
+        }
+        input[type="text"] {
+          font-size: 16px;
+          min-height: 48px;
+          padding: 12px 14px;
+        }
+        th,
+        td {
+          padding: 10px 10px;
+          font-size: 0.8125rem;
+        }
+        .modal-backdrop {
+          align-items: flex-end;
+          padding: 0;
+          padding-bottom: env(safe-area-inset-bottom, 0px);
+        }
+        .modal {
+          max-width: 100%;
+          width: 100%;
+          border-radius: 20px 20px 0 0;
+          max-height: min(85dvh, 100%);
+          padding: 18px max(16px, env(safe-area-inset-right, 0px)) max(20px, calc(env(safe-area-inset-bottom, 0px) + 8px))
+            max(16px, env(safe-area-inset-left, 0px));
+        }
+        .modal-close {
+          width: 44px;
+          height: 44px;
+          min-width: 44px;
+          min-height: 44px;
+        }
+        .modal-actions .btn {
+          min-height: 44px;
+          flex: 1;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+          animation-duration: 1ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 1ms !important;
+          scroll-behavior: auto !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <button type="button" class="theme-toggle" id="btnTheme" aria-label="Включить светлую тему" title="Тема оформления">
+      <svg class="icon-sun" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="2" />
+        <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+      </svg>
+      <svg class="icon-moon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+    </button>
+    <div class="wrap">
+      <header class="top">
+        <div class="brand">
+          <img class="logo-img" src="/static/logo.png" alt="translide" />
+          <div>
+            <h1>Кабинет</h1>
+            <div class="sub">История переводов и настройки аккаунта</div>
+          </div>
+        </div>
+        <div class="top-actions">
+          <button class="btn icon" id="btnHome" type="button" title="На главную" aria-label="На главную">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M3 11.5L12 4l9 7.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M6.5 10.5V20h11V10.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            На главную
+          </button>
+          <button class="btn" id="btnLogout" type="button">Выйти</button>
+        </div>
+      </header>
+
+      <div class="grid">
+        <aside class="card">
+          <h2>Профиль</h2>
+          <div class="muted" id="profileLine">Загрузка…</div>
+          <div style="height: 10px;"></div>
+          <div class="toast" id="notice"></div>
+          <div style="height: 14px;"></div>
+          <div class="muted">Что можно добавить дальше (как у аналогов)</div>
+          <div class="features">
+            <div class="feature">
+              <div class="feature-title">Глоссарий терминов</div>
+              <p class="feature-desc">Скажи системе: «слово → перевод», чтобы бренд/термины всегда были одинаковыми.</p>
+              <div class="feature-meta">
+                <span class="tag">Скоро</span>
+                <span class="tag">Качество</span>
+              </div>
+            </div>
+            <div class="feature">
+              <div class="feature-title">Шаблоны языков</div>
+              <p class="feature-desc">Быстрые наборы: RU→KZ, KZ→RU — в один клик.</p>
+              <div class="feature-meta">
+                <span class="tag">Скоро</span>
+                <span class="tag">Удобство</span>
+              </div>
+            </div>
+            <div class="feature">
+              <div class="feature-title">Лимиты / кредиты</div>
+              <p class="feature-desc">Понятная модель: бесплатные переводы + пакеты/подписка для больших объёмов.</p>
+              <div class="feature-meta">
+                <span class="tag">Скоро</span>
+                <span class="tag">Монетизация</span>
+              </div>
+            </div>
+            <div class="feature">
+              <div class="feature-title">Совместная работа</div>
+              <p class="feature-desc">Команда, роли, общий глоссарий, общий доступ к истории.</p>
+              <div class="feature-meta">
+                <span class="tag">Скоро</span>
+                <span class="tag">Команды</span>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <main class="card">
+          <div class="history-intro" role="note">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 8v5l3 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M3 12a9 9 0 1 0 3-6.708" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M3 4v4h4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <div>
+              <strong>История переводов</strong> — здесь отображаются все запросы, которые Вы выполняли после входа в аккаунт. Можно искать по файлу или языку, выгрузить список в CSV или очистить историю.
+            </div>
+          </div>
+          <div class="row" style="justify-content: space-between; margin-bottom: 10px;">
+            <div>
+              <h2 style="margin: 0;">Список переводов</h2>
+              <div class="muted">Данные привязаны к Вашему аккаунту.</div>
+            </div>
+            <div class="row">
+              <button class="btn" id="btnExport" type="button">Скачать CSV</button>
+              <button class="btn danger" id="btnClear" type="button">Очистить</button>
+            </div>
+          </div>
+
+          <div style="margin-bottom: 10px;">
+            <input id="q" type="text" placeholder="Поиск по имени файла или коду языка (ru, en, de…)" />
+          </div>
+
+          <p class="history-table-hint" role="note">
+            На узком экране таблицу можно прокручивать по горизонтали.
+          </p>
+          <div class="history-table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Файл</th>
+                  <th>Язык</th>
+                  <th class="right">Время</th>
+                </tr>
+              </thead>
+              <tbody id="tbody"></tbody>
+            </table>
+            <div id="empty" class="empty" hidden>История пуста.</div>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="logoutModal" role="dialog" aria-modal="true" aria-labelledby="logoutTitle">
+      <div class="modal">
+        <div class="modal-header">
+          <h3 id="logoutTitle">Выйти из аккаунта?</h3>
+          <button type="button" class="modal-close" id="logoutModalClose" aria-label="Закрыть">×</button>
+        </div>
+        <div class="muted">Вы уверены, что хотите выйти? История останется в аккаунте.</div>
+        <div class="modal-actions">
+          <button type="button" class="btn" id="logoutCancel">Отмена</button>
+          <button type="button" class="btn danger" id="logoutConfirm">Выйти</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const TOKEN_KEY = "shinra_token";
+      const btnTheme = document.getElementById("btnTheme");
+      function syncThemeUi() {
+        if (!btnTheme) return;
+        const t = document.documentElement.getAttribute("data-theme") || "dark";
+        btnTheme.setAttribute("aria-pressed", t === "light" ? "true" : "false");
+        btnTheme.setAttribute("aria-label", t === "dark" ? "Включить светлую тему" : "Включить тёмную тему");
+        btnTheme.setAttribute("title", t === "dark" ? "Светлая тема" : "Тёмная тема");
+      }
+      if (btnTheme) {
+        btnTheme.addEventListener("click", () => {
+          const next = document.documentElement.getAttribute("data-theme") === "light" ? "dark" : "light";
+          document.documentElement.setAttribute("data-theme", next);
+          try {
+            localStorage.setItem("translide-theme", next);
+          } catch (e) {}
+          syncThemeUi();
+        });
+        syncThemeUi();
+      }
+
+      const btnHome = document.getElementById("btnHome");
+      const btnLogout = document.getElementById("btnLogout");
+      const btnExport = document.getElementById("btnExport");
+      const btnClear = document.getElementById("btnClear");
+      const profileLine = document.getElementById("profileLine");
+      const notice = document.getElementById("notice");
+      const q = document.getElementById("q");
+      const tbody = document.getElementById("tbody");
+      const empty = document.getElementById("empty");
+      const logoutModal = document.getElementById("logoutModal");
+      const logoutModalClose = document.getElementById("logoutModalClose");
+      const logoutCancel = document.getElementById("logoutCancel");
+      const logoutConfirm = document.getElementById("logoutConfirm");
+
+      let items = [];
+
+      function getToken() { return localStorage.getItem(TOKEN_KEY); }
+      function setToken(t) { if (t) localStorage.setItem(TOKEN_KEY, t); else localStorage.removeItem(TOKEN_KEY); }
+      function authHeaders() { const t = getToken(); return t ? { Authorization: "Bearer " + t } : {}; }
+
+      function toast(msg) {
+        notice.textContent = msg;
+        notice.classList.add("is-on");
+        setTimeout(() => notice.classList.remove("is-on"), 2500);
+      }
+
+      function fmtTime(iso) {
+        try { return new Date(iso).toLocaleString("ru-RU", { dateStyle: "short", timeStyle: "short" }); }
+        catch { return iso || ""; }
+      }
+
+      function render(list) {
+        tbody.innerHTML = "";
+        empty.hidden = list.length !== 0;
+        for (const row of list) {
+          const tr = document.createElement("tr");
+          const td1 = document.createElement("td");
+          td1.textContent = row.original_filename || "";
+          const td2 = document.createElement("td");
+          td2.textContent = row.target_lang || "";
+          const td3 = document.createElement("td");
+          td3.className = "right";
+          td3.textContent = fmtTime(row.created_at);
+          tr.appendChild(td1);
+          tr.appendChild(td2);
+          tr.appendChild(td3);
+          tbody.appendChild(tr);
+        }
+      }
+
+      function applyFilter() {
+        const s = (q.value || "").trim().toLowerCase();
+        if (!s) return render(items);
+        render(
+          items.filter(
+            (x) =>
+              String(x.original_filename || "").toLowerCase().includes(s) ||
+              String(x.target_lang || "").toLowerCase().includes(s)
+          )
+        );
+      }
+
+      function downloadCSV(rows) {
+        const header = ["filename", "target_lang", "created_at"];
+        const lines = [header.join(",")];
+        for (const r of rows) {
+          const vals = [r.original_filename || "", r.target_lang || "", r.created_at || ""].map((v) => {
+            const s = String(v).replace(/\"/g, '\"\"');
+            return '\"' + s + '\"';
+          });
+          lines.push(vals.join(","));
+        }
+        const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "translide-history.csv";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      }
+
+      async function boot() {
+        const t = getToken();
+        if (!t) {
+          location.href = "/";
+          return;
+        }
+        const me = await fetch("/api/me", { headers: authHeaders() });
+        if (!me.ok) {
+          setToken(null);
+          location.href = "/";
+          return;
+        }
+        const u = await me.json();
+        const firstName = (u && u.first_name ? String(u.first_name) : "").trim();
+        const lastName = (u && u.last_name ? String(u.last_name) : "").trim();
+        profileLine.textContent = firstName ? ("Здравствуйте, " + firstName + "!") : "Вы вошли в аккаунт.";
+        if (firstName && lastName) profileLine.textContent += " (" + firstName + " " + lastName + ")";
+
+        const hist = await fetch("/api/history", { headers: authHeaders() });
+        const data = hist.ok ? await hist.json() : { items: [] };
+        items = Array.isArray(data.items) ? data.items : [];
+        applyFilter();
+      }
+
+      btnHome.addEventListener("click", () => (location.href = "/"));
+
+      let lastFocusEl = null;
+      let trapRoot = null;
+      function getFocusable(root) {
+        return Array.from(
+          root.querySelectorAll(
+            'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
+          )
+        ).filter((el) => el.offsetParent !== null);
+      }
+      function trapModalFocus(root, returnEl) {
+        lastFocusEl = returnEl != null ? returnEl : document.activeElement;
+        trapRoot = root;
+        const f = getFocusable(root);
+        if (f.length) f[0].focus();
+      }
+      function releaseModalFocus() {
+        trapRoot = null;
+        if (lastFocusEl && typeof lastFocusEl.focus === "function") {
+          try {
+            lastFocusEl.focus();
+          } catch {}
+        }
+        lastFocusEl = null;
+      }
+      function openLogout() {
+        logoutModal.classList.add("is-open");
+        const panel = logoutModal.querySelector(".modal");
+        trapModalFocus(panel || logoutModal, btnLogout);
+      }
+      function closeLogout() {
+        logoutModal.classList.remove("is-open");
+        releaseModalFocus();
+      }
+      btnLogout.addEventListener("click", openLogout);
+      logoutModalClose.addEventListener("click", closeLogout);
+      logoutCancel.addEventListener("click", closeLogout);
+      logoutModal.addEventListener("click", (e) => {
+        if (e.target === logoutModal) closeLogout();
+      });
+      logoutConfirm.addEventListener("click", () => {
+        setToken(null);
+        location.href = "/";
+      });
+      document.addEventListener("keydown", (e) => {
+        if (!trapRoot || e.key !== "Tab") return;
+        const f = getFocusable(trapRoot);
+        if (!f.length) return;
+        const first = f[0];
+        const last = f[f.length - 1];
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else if (document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      });
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && logoutModal.classList.contains("is-open")) closeLogout();
+      });
+      q.addEventListener("input", applyFilter);
+      btnExport.addEventListener("click", () => downloadCSV(items));
+      btnClear.addEventListener("click", async () => {
+        if (!confirm("Очистить историю переводов?")) return;
+        const r = await fetch("/api/history", { method: "DELETE", headers: authHeaders() });
+        if (!r.ok) { toast("Не удалось очистить."); return; }
+        items = [];
+        applyFilter();
+        toast("История очищена.");
+      });
+
+      boot();
+    </script>
+  </body>
+</html>
